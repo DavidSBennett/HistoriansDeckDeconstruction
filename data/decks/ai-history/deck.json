@@ -132,7 +132,8 @@
       "stance": "Builder",
       "quote": "\"In working on the ACE I am more interested in the possibility of producing models of the action of the brain than in the practical applications of computing.\"",
       "num": 5,
-      "image": "",
+      "image": "A1.jpg",
+      "imageUrl": "",
       "imageCredit": "Turing, Alan M. Letter to W. Ross Ashby, ca. November 19, 1946. Digitized scan, courtesy of the National Physical Laboratory. The W. Ross Ashby Digital Archive. Accessed November 10, 2026. https://ashby.info/letters/images/wralx018.jpg."
     },
     {
@@ -151,7 +152,8 @@
       "stance": "Builder",
       "quote": "\"Today I can say I have solved the problem I set out to solve on 7 May '28. I asked, roughly, whence come the patterning properties of the nervous system. The answer is now clear.\" (entry of June 13, 1959)",
       "num": 2,
-      "image": "",
+      "image": "A2.jpg",
+      "imageUrl": "",
       "imageCredit": "Ashby, W. Ross. Journal, pages 6116-6117, entry of June 13, 1959. Digitized page image. The W. Ross Ashby Digital Archive; original in Add MS 89153, British Library, London. Accessed November 10, 2026. https://ashby.info/journal/page/images/wrac3180.jpg."
     },
     {
@@ -170,7 +172,8 @@
       "stance": "Builder",
       "quote": "\"What we want is a machine that can learn from experience.\"",
       "num": 7,
-      "image": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Alan_Turing_Aged_16.jpg",
+      "image": "A3.jpg",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Alan_Turing_Aged_16.jpg",
       "imageCredit": "Chaffin, Arthur Reginald (attributed). Alan Turing Aged 16. 1928-1929. Photograph. Public domain; related material in the Turing Papers, King's College Archive Centre, Cambridge. Wikimedia Commons. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/a/a1/Alan_Turing_Aged_16.jpg."
     },
     {
@@ -189,7 +192,8 @@
       "stance": "Builder",
       "quote": "\"The \"computable\" numbers may be described briefly as the real numbers whose expressions as a decimal are calculable by finite means.\"",
       "num": 3,
-      "image": "",
+      "image": "A4.jpg",
+      "imageUrl": "",
       "imageCredit": "Turing, A. M. \"On Computable Numbers, with an Application to the Entscheidungsproblem.\" First page. Proceedings of the London Mathematical Society, ser. 2, 42 (1936-37): 230-265. Page scan hosted by the University of Virginia. Accessed November 10, 2026. https://www.cs.virginia.edu/~robins/Turing_Paper_1936.pdf."
     },
     {
@@ -208,7 +212,8 @@
       "stance": "Builder",
       "quote": "\"Two women operating ENIAC\" (catalogue caption)",
       "num": 4,
-      "image": "https://upload.wikimedia.org/wikipedia/commons/8/8c/Two_women_operating_ENIAC_%28full_resolution%29.jpg",
+      "image": "A5.jpg",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/8/8c/Two_women_operating_ENIAC_%28full_resolution%29.jpg",
       "imageCredit": "U.S. Army. Two Women Operating ENIAC. 1946. Photograph, photographer unidentified; from the archives of the ARL Technical Library. Public domain. Wikimedia Commons. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/8/8c/Two_women_operating_ENIAC_%28full_resolution%29.jpg."
     },
     {
@@ -227,7 +232,8 @@
       "stance": "Builder",
       "quote": "\"Perhaps some day in the dim future it will be possible to advance the computations faster than the weather advances and at a cost less than the saving to mankind due to the information gained. But that is a dream.\"",
       "num": 1,
-      "image": "",
+      "image": "A6.jpg",
+      "imageUrl": "",
       "imageCredit": "Richardson, Lewis Fry. Weather Prediction by Numerical Process. Frontispiece map. Cambridge: Cambridge University Press, 1922. Public domain. Internet Archive. Accessed November 10, 2026. https://archive.org/details/weatherpredictio00richrich."
     },
     {
@@ -246,7 +252,8 @@
       "stance": "",
       "quote": "\"This is only a foretaste of what is to come, and only the shadow of what is going to be.\" (Turing, as quoted in the article)",
       "num": 11,
-      "image": "",
+      "image": "A7.jpg",
+      "imageUrl": "",
       "imageCredit": "\"The Mechanical Brain: Answer Found to 300 Year-Old Sum.\" The Times (London), June 11, 1949, 4. The Times Digital Archive (Gale); wording corroborated at quoteinvestigator.com/2019/10/12/ai-shadow/. Accessed November 10, 2026."
     },
     {
@@ -265,7 +272,8 @@
       "stance": "Builder",
       "quote": "\"After the great positive contribution of Turing-cum-Pitts-and-McCulloch is assimilated, the situation is rather worse than better than before.\"",
       "num": 6,
-      "image": "",
+      "image": "A8.jpg",
+      "imageUrl": "",
       "imageCredit": "Los Alamos National Laboratory. John von Neumann. N.d. Identification-badge photograph. LANL (attribution requested). Wikimedia Commons. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/5/5e/JohnvonNeumann-LosAlamos.gif."
     },
     {
@@ -284,7 +292,8 @@
       "stance": "Builder",
       "quote": "\"Kilburn Highest Factor Routine (amended)\" (notebook heading of July 18, 1948)",
       "num": 8,
-      "image": "",
+      "image": "A9.jpg",
+      "imageUrl": "",
       "imageCredit": "Tootill, Geoff C. Notebook page, \"Kilburn Highest Factor Routine (amended),\" July 18, 1948. Page image. University of Manchester Computer50 archive; original notebook in the archive of the Science and Industry Museum, Manchester. Accessed November 10, 2026. https://curation.cs.manchester.ac.uk/computer50/www.computer50.org/kgill/mark1/prog.gif."
     },
     {
@@ -303,7 +312,8 @@
       "stance": "Critic",
       "quote": "\"Not until a machine can write a sonnet or compose a concerto because of thoughts and emotions felt, and not by the chance fall of symbols, could we agree that machine equals brain-that is, not only write it but know that it had written it.\"",
       "num": 10,
-      "image": "",
+      "image": "A10.jpg",
+      "imageUrl": "",
       "imageCredit": "Jefferson, Geoffrey. \"The Mind of Mechanical Man.\" First page. British Medical Journal 1, no. 4616 (June 25, 1949): 1105-1110. PubMed Central PMC2050428. Accessed November 10, 2026. https://pmc.ncbi.nlm.nih.gov/articles/PMC2050428/."
     },
     {
@@ -322,7 +332,8 @@
       "stance": "Builder",
       "quote": "\"Machine in operation for first time. Printed table of squares (0-99), time for programme 2 mins. 35 secs.\" (entry of May 6, 1949)",
       "num": 9,
-      "image": "",
+      "image": "B1.jpg",
+      "imageUrl": "",
       "imageCredit": "Handwritten Log Showing First Successful Run of EDSAC. May 6, 1949. Photographic print, Peter Bird collection. Reference CH51856, Centre for Computing History, Cambridge. Accessed November 10, 2026. http://www.computinghistory.org.uk/det/51856/51856-EDSAC-log."
     },
     {
@@ -341,7 +352,8 @@
       "stance": "Builder",
       "quote": "\"If a machine can think, it might think more intelligently than we do, and then where should we be?\"",
       "num": 15,
-      "image": "",
+      "image": "B2.jpg",
+      "imageUrl": "",
       "imageCredit": "Turing, Alan M. \"Can Digital Computers Think?\" Annotated typescript, 1951. Item AMT/B/5, Turing Papers, King's College Archive Centre, Cambridge. The Turing Digital Archive. Accessed November 10, 2026. https://turingarchive.kings.cam.ac.uk/publications-lectures-and-talks-amtb/amt-b-5."
     },
     {
@@ -360,7 +372,8 @@
       "stance": "Builder",
       "quote": "\"I propose to consider the question, \"Can machines think?\"\"",
       "num": 12,
-      "image": "",
+      "image": "B3.jpg",
+      "imageUrl": "",
       "imageCredit": "Turing, A. M. \"Computing Machinery and Intelligence.\" Mind 59, no. 236 (October 1950): 433-460. Full-text transcription. Accessed November 10, 2026. https://courses.cs.umbc.edu/471/papers/turing.pdf."
     },
     {
@@ -379,7 +392,8 @@
       "stance": "Builder",
       "quote": "\"Claude Shannon moving his electric mouse in a maze.\" (catalogue caption)",
       "num": 17,
-      "image": "",
+      "image": "B4.jpg",
+      "imageUrl": "",
       "imageCredit": "\"Nickknack00.\" Theseus (1950), Betty and Claude Shannon, MIT Museum. 2026. Photograph. Wikimedia Commons, CC BY 4.0. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/8/8a/Theseus_%281950%29%2C_Betty_and_Claude_Shannon%2C_MIT_Museum.jpg."
     },
     {
@@ -398,7 +412,8 @@
       "stance": "",
       "quote": "\"the computation time for a 24-hour forecast was about 24 hours, that is, we were just able to keep pace with the weather\"",
       "num": 13,
-      "image": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Glen_Beck_and_Betty_Snyder_program_the_ENIAC_in_building_328_at_the_Ballistic_Research_Laboratory.jpg",
+      "image": "B5.jpg",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Glen_Beck_and_Betty_Snyder_program_the_ENIAC_in_building_328_at_the_Ballistic_Research_Laboratory.jpg",
       "imageCredit": "U.S. Army. Glen Beck and Betty Snyder Program the ENIAC in Building 328 at the Ballistic Research Laboratory. Ca. 1947. Photograph, photographer unknown. Public domain. Wikimedia Commons. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/d/d3/Glen_Beck_and_Betty_Snyder_program_the_ENIAC_in_building_328_at_the_Ballistic_Research_Laboratory.jpg."
     },
     {
@@ -417,7 +432,8 @@
       "stance": "Builder",
       "quote": "\"A public demonstration of what is believed to be the first successful use of a machine to translate meaningful texts from one language to another took place here yesterday afternoon.\"",
       "num": 18,
-      "image": "",
+      "image": "B6.jpg",
+      "imageUrl": "",
       "imageCredit": "Plumb, Robert K. \"Russian Is Turned Into English by a Fast Electronic Translator.\" New York Times, January 8, 1954, 1. Transcription, Machine Translation Archive via the ACL Anthology. Accessed November 10, 2026. https://aclanthology.org/www.mt-archive.info/NYT-1954-Plumb.pdf."
     },
     {
@@ -436,7 +452,8 @@
       "stance": "Builder",
       "quote": "\"I am convinced that the crux of problem of learning is recognizing relationships and being able to use them. Of course there is a large amount of matter which has to be simply remembered in the form of facts - the multiplication table, for instance, or the words of the language - but without the assistance of a scheme of relations this knowledge is not much use.\"",
       "num": 16,
-      "image": "",
+      "image": "B7.jpg",
+      "imageUrl": "",
       "imageCredit": "Strachey, Christopher. Letter to Alan Turing, May 15, 1951. Item AMT/D/5, Turing Papers, King's College Archive Centre, Cambridge. The Turing Digital Archive. Accessed November 10, 2026. https://turingarchive.kings.cam.ac.uk/correspondence-amtd/amt-d-5."
     },
     {
@@ -455,7 +472,8 @@
       "stance": "Builder",
       "quote": "\"This idea may, indeed, work.\"",
       "num": 20,
-      "image": "",
+      "image": "B8.jpg",
+      "imageUrl": "",
       "imageCredit": "Solomonoff, Ray. Dartmouth Summer Research Project notebook and notes, 1956. Digitized scans. Ray Solomonoff memorial website, Solomonoff estate. Accessed November 10, 2026. https://raysolomonoff.com/dartmouth/dart.html."
     },
     {
@@ -474,7 +492,8 @@
       "stance": "Builder",
       "quote": "\"\"You cannot make a machine to think for you\". This is a commonplace that is usually accepted without question. It will be the purpose of this paper to question it.\"",
       "num": 14,
-      "image": "",
+      "image": "B9.jpg",
+      "imageUrl": "",
       "imageCredit": "Turing, Alan M. \"Intelligent Machinery, A Heretical Theory.\" Typescript, c. 1951. Item AMT/B/4, Turing Papers, King's College Archive Centre, Cambridge. The Turing Digital Archive. Accessed November 10, 2026. https://turingarchive.kings.cam.ac.uk/publications-lectures-and-talks-amtb/amt-b-4."
     },
     {
@@ -493,7 +512,8 @@
       "stance": "Builder",
       "quote": "\"The study is to proceed on the basis of the conjecture that every aspect of learning or any other feature of intelligence can in principle be so precisely described that a machine can be made to simulate it.\"",
       "num": 19,
-      "image": "",
+      "image": "B10.jpg",
+      "imageUrl": "",
       "imageCredit": "McCarthy, John, Marvin Minsky, Nathaniel Rochester, and Claude Shannon. \"A Proposal for the Dartmouth Summer Research Project on Artificial Intelligence,\" 1955. Scan of typescript materials, including Ray Solomonoff's signed copy. Ray Solomonoff memorial website. Accessed November 10, 2026. https://raysolomonoff.com/dartmouth/dartprops.jpg."
     },
     {
@@ -512,7 +532,8 @@
       "stance": "Builder",
       "quote": "\"That within ten years a digital computer will be the world's chess champion, unless the rules bar it from competition.\"",
       "num": 21,
-      "image": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Herbert_A._Simon_and_Allen_Newell_Chess_Match.jpg",
+      "image": "C1.jpg",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Herbert_A._Simon_and_Allen_Newell_Chess_Match.jpg",
       "imageCredit": "Herbert A. Simon and Allen Newell Chess Match. 1958. Photograph, photographer unknown; uploaded to Flickr by Paolo Massa. Public domain. Wikimedia Commons. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/f/f7/Herbert_A._Simon_and_Allen_Newell_Chess_Match.jpg."
     },
     {
@@ -531,7 +552,8 @@
       "stance": "Critic",
       "quote": "\"we do not have useful machine translation. Further, there is no immediate or predictable prospect of useful machine translation.\"",
       "num": 24,
-      "image": "",
+      "image": "C2.jpg",
+      "imageUrl": "",
       "imageCredit": "Automatic Language Processing Advisory Committee. Language and Machines: Computers in Translation and Linguistics. Title page. Publication 1416. Washington, DC: National Academy of Sciences-National Research Council, 1966. Scan, ACL Anthology. Accessed November 10, 2026. https://aclanthology.org/www.mt-archive.info/ALPAC-1966.pdf."
     },
     {
@@ -550,7 +572,8 @@
       "stance": "Builder",
       "quote": "\"John McCarthy, artificial intelligence pioneer, playing chess at Stanford's IBM 7090\" (catalogue caption)",
       "num": 25,
-      "image": "",
+      "image": "C3.jpg",
+      "imageUrl": "",
       "imageCredit": "John McCarthy, Artificial Intelligence Pioneer, Playing Chess at Stanford's IBM 7090. Ca. 1967. Photograph, courtesy of Stanford University. \"Mastering the Game\" exhibition, Computer History Museum, Mountain View, CA. Accessed November 10, 2026. https://www.computerhistory.org/chess/stl-431e1a07ca980/."
     },
     {
@@ -569,7 +592,8 @@
       "stance": "Builder",
       "quote": "\"ARPANET LOGICAL MAP, MARCH 1977\" (printed on the map)",
       "num": 30,
-      "image": "https://upload.wikimedia.org/wikipedia/commons/b/bf/Arpanet_logical_map%2C_march_1977.png",
+      "image": "C4.jpg",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/bf/Arpanet_logical_map%2C_march_1977.png",
       "imageCredit": "Bolt Beranek and Newman Inc. ARPANET Logical Map, March 1977. 1977. Map plate from the ARPANET Completion Report (1978). Public domain. Wikimedia Commons, source Computer History Museum. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/b/bf/Arpanet_logical_map%2C_march_1977.png."
     },
     {
@@ -588,7 +612,8 @@
       "stance": "Builder",
       "quote": "\"will be able to walk, talk, see, write, reproduce itself and be conscious of its existence\"",
       "num": 22,
-      "image": "https://upload.wikimedia.org/wikipedia/commons/1/13/Mark_I_Perceptron%2C_Figure_2_of_operator%27s_manual.png",
+      "image": "C5.jpg",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/13/Mark_I_Perceptron%2C_Figure_2_of_operator%27s_manual.png",
       "imageCredit": "Hay, John C., and Albert E. Murray. \"Mark I Perceptron.\" Figure 2 in Mark I Perceptron Operators' Manual, 1960. Public domain. Wikimedia Commons. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/1/13/Mark_I_Perceptron%2C_Figure_2_of_operator%27s_manual.png."
     },
     {
@@ -607,7 +632,8 @@
       "stance": "Builder",
       "quote": "\"It seems to me to be interesting and important, nevertheless, to develop a capability for integrated network operation.\"",
       "num": 23,
-      "image": "https://upload.wikimedia.org/wikipedia/commons/6/66/J._C._R._Licklider.jpg",
+      "image": "C6.jpg",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/6/66/J._C._R._Licklider.jpg",
       "imageCredit": "J. C. R. Licklider. N.d. Photograph, photographer unknown. Public domain (via the U.S. National Library of Medicine). Wikimedia Commons. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/6/66/J._C._R._Licklider.jpg."
     },
     {
@@ -626,7 +652,8 @@
       "stance": "Builder",
       "quote": "\"Artist's sketch for Mazes that are grown incrementally, with numbers representing the stage of each maze element\" (exhibition label)",
       "num": 27,
-      "image": "",
+      "image": "C7.jpg",
+      "imageUrl": "",
       "imageCredit": "Cohen, Harold. 0305-03. 2003. Digital inkjet print. Museum no. 2010EL6973, Victoria and Albert Museum, London. Accessed November 10, 2026. https://collections.vam.ac.uk/item/O114802/."
     },
     {
@@ -646,6 +673,7 @@
       "quote": "\"In no part of the field have the discoveries made so far produced the major impact that was then promised.\"",
       "num": 28,
       "image": "",
+      "imageUrl": "",
       "imageCredit": "Lighthill, James, John McCarthy, Donald Michie, and Richard Gregory. The Lighthill Debate. 1973. Video recording (BBC \"Controversy\"; still frame). Artificial Intelligence Applications Institute, University of Edinburgh. Accessed November 10, 2026. https://www.aiai.ed.ac.uk/events/lighthill1973/."
     },
     {
@@ -664,7 +692,8 @@
       "stance": "Builder",
       "quote": "\"This system, termed MYCIN, utilizes computer techniques derived principally from the subfield of computer science known as artificial intelligence (AI). MYCIN's task is to assist with the decisions involved in the selection of appropriate therapy for patients with infections.\" (preface to the 1976 published edition)",
       "num": 29,
-      "image": "",
+      "image": "C9.jpg",
+      "imageUrl": "",
       "imageCredit": "Shortliffe, Edward H. Computer-Based Medical Consultations: MYCIN. Cover. New York: Elsevier, 1976. Cover image via Google Books. Accessed November 10, 2026. https://books.google.com/books/content?id=i9QXugPQw6oC&printsec=frontcover&img=1&zoom=1."
     },
     {
@@ -683,7 +712,8 @@
       "stance": "Builder",
       "quote": "\"Experimental Mobile Automaton (\"Shakey\")\" (catalogue caption)",
       "num": 26,
-      "image": "",
+      "image": "C10.jpg",
+      "imageUrl": "",
       "imageCredit": "\"The wub.\" SRI Shakey Robot, 1969, Computer History Museum. 2023. Photograph. Wikimedia Commons, CC BY-SA 4.0. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/c/c3/SRI_Shakey_robot%2C_1969%2C_Computer_History_Museum.jpg."
     },
     {
@@ -702,7 +732,8 @@
       "stance": "Critic",
       "quote": "\"no program by itself is sufficient for thinking\"",
       "num": 31,
-      "image": "",
+      "image": "D1.jpg",
+      "imageUrl": "",
       "imageCredit": "Breindel, Matthew. John Searle. 2005. Photograph. Wikimedia Commons, CC BY-SA 3.0. Accessed November 10, 2026. https://upload.wikimedia.org/wikipedia/commons/6/69/John_searle2.jpg."
     },
     {
@@ -721,7 +752,8 @@
       "stance": "",
       "quote": "\"five PIM models were produced, including the PIM/p comprised of 512 constituent processors, and the PIM/m comprised of 256 constituent processors\"",
       "num": 38,
-      "image": "",
+      "image": "D2.jpg",
+      "imageUrl": "",
       "imageCredit": "Parallel Inference Machines PIM/p and PIM/m. Photographs. IPSJ Computer Museum, Information Processing Society of Japan. Accessed November 10, 2026. http://museum.ipsj.or.jp/computer/other/images/0002_01.gif."
     },
     {
@@ -741,6 +773,7 @@
       "quote": "\"The Moscow ballistic missile defenses identified in the map at right include the Pushkino ABM radar\"",
       "num": 36,
       "image": "",
+      "imageUrl": "",
       "imageCredit": "U.S. Department of Defense. \"Moscow Ballistic Missile Defense.\" Map. In U.S. Congress, Office of Technology Assessment, Ballistic Missile Defense Technologies, OTA-ISC-254, 60. Washington, DC: U.S. Government Printing Office, 1985. Accessed November 10, 2026. https://govinfo.library.unt.edu/ota/Ota_4/DATA/1985/8504.PDF."
     },
     {
@@ -759,7 +792,8 @@
       "stance": "Critic",
       "quote": "\"A bold 10-year effort by Japan to seize the lead in computer technology is fizzling to a close, having failed to meet many of its ambitious goals or to produce technology that Japan's computer industry wanted.\"",
       "num": 39,
-      "image": "",
+      "image": "D4.jpg",
+      "imageUrl": "",
       "imageCredit": "Pollack, Andrew. \"'Fifth Generation' Became Japan's Lost Generation.\" New York Times, June 5, 1992, D1. Printed page as reproduced in TimesMachine. Accessed November 10, 2026. https://timesmachine.nytimes.com/timesmachine/1992/06/05/864692.html."
     },
     {
@@ -778,7 +812,8 @@
       "stance": "Builder",
       "quote": "\"We offer a hellish vision of what will happen if this opportunity isn't snatched away from the Japanese, but we also offer a celestial vision of what can happen if we meet the challenge.\"",
       "num": 32,
-      "image": "",
+      "image": "D5.jpg",
+      "imageUrl": "",
       "imageCredit": "McCorduck, Pamela. Letter to Edward A. Feigenbaum, January 19, 1982. Digitized scan. Edward A. Feigenbaum Papers, SC0340, Box 37, Folder 5, Stanford University Special Collections. Accessed November 10, 2026. https://purl.stanford.edu/nd130tf3379."
     },
     {
@@ -797,7 +832,8 @@
       "stance": "Builder",
       "quote": "\"An elegant French-style banquet, and I'm asked to say a few words. I talk about the momentous occasion not only for Japan, but for the human race.\"",
       "num": 35,
-      "image": "",
+      "image": "D6.jpg",
+      "imageUrl": "",
       "imageCredit": "\"Edward Feigenbaum (Center), Director of the Stanford University Computation Center in 1996.\" Photograph. In Pamela McCorduck, This Could Be Important, photo gallery. Pittsburgh: ETC Press, 2019."
     },
     {
@@ -816,7 +852,8 @@
       "stance": "Critic",
       "quote": "\"there's a mood that I'm sure many of you are familiar with of deep unease among AI researchers who have been around more than the last four years or so. This unease is due to the worry that perhaps expectations about AI are too high, and that this will eventually result in disaster.\"",
       "num": 34,
-      "image": "",
+      "image": "D7.jpg",
+      "imageUrl": "",
       "imageCredit": "McDermott, Drew, M. Mitchell Waldrop, B. Chandrasekaran, John McDermott, and Roger Schank. \"The Dark Ages of AI: A Panel Discussion at AAAI-84.\" First page. AI Magazine 6, no. 3 (Fall 1985): 122-134. CC BY. Accessed November 10, 2026. https://ojs.aaai.org/aimagazine/index.php/aimagazine/article/view/494."
     },
     {
@@ -835,7 +872,8 @@
       "stance": "Builder",
       "quote": "\"the Agency plans to create a new generation of \"machine intelligence technology.\"\"",
       "num": 33,
-      "image": "",
+      "image": "D8.jpg",
+      "imageUrl": "",
       "imageCredit": "Defense Advanced Research Projects Agency. Strategic Computing: New-Generation Computing Technology. Cover. Washington, DC: DARPA, October 28, 1983. DTIC ADA141982; cover image via Internet Archive. Accessed November 10, 2026. https://archive.org/services/img/DTIC_ADA141982."
     },
     {
@@ -854,7 +892,8 @@
       "stance": "Builder",
       "quote": "\"In May 1997, IBM supercomputer Deep Blue played World Chess Champion Garry Kasparov winning the six-game rematch 3.5-2.5.\" (catalogue caption)",
       "num": 40,
-      "image": "",
+      "image": "D9.jpg",
+      "imageUrl": "",
       "imageCredit": "Deep Blue Team after 1997 Deep Blue vs. Kasparov Re-match in New York City, New York. May 11, 1997. Photograph, photographer unrecorded; gift of Feng-hsiung Hsu. Catalog 102645318, Computer History Museum, Mountain View, CA. Accessed November 10, 2026. https://www.computerhistory.org/collections/catalog/102645318."
     },
     {
@@ -873,7 +912,8 @@
       "stance": "",
       "quote": "\"a visualization study of inbound traffic measured in billions of bytes on the NSFNET T1 backbone for September 1991\" (credit caption)",
       "num": 37,
-      "image": "",
+      "image": "D10.jpg",
+      "imageUrl": "",
       "imageCredit": "Cox, Donna, and Robert Patterson. NSFNET T1 Backbone and Regional Networks, September 1991. Traffic visualization; data by Merit Network, Inc. NCSA, University of Illinois at Urbana-Champaign. CAIDA Internet Atlas. Accessed November 10, 2026. https://www.caida.org/projects/internetatlas/gallery/nsfnet/1457.cox.lg.gif."
     }
   ]

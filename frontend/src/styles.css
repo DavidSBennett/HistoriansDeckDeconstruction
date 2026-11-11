@@ -40,6 +40,14 @@ main.table { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 14
 .card.dim { opacity: .4; }
 .card .hd { background: var(--bar); color: #fff; padding: 3px 7px; display: flex; justify-content: space-between; gap: 6px; }
 .card .bd { padding: 7px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
+/* The image space: a fixed band under the header, the picture cropped to fill it. */
+.card .pic { display: block; width: 100%; height: 96px; object-fit: cover; object-position: center 30%; background: #e9e3d6; border-bottom: 1px solid var(--line); }
+.card.mini .pic { height: 60px; }
+.card .pic.none { display: flex; align-items: center; justify-content: center; opacity: .55; color: #fff; }
+.card .pic.none .mono { font-size: 10px; opacity: .9; }
+.fullpic { margin: 0 0 12px; text-align: center; }
+.fullpic img { max-width: 100%; max-height: 340px; object-fit: contain; border: 1px solid var(--line); background: #fff; }
+.fullpic figcaption { font-size: 11.5px; color: var(--mute); margin-top: 4px; text-align: left; }
 .card .ti { font-weight: 700; line-height: 1.15; }
 .card .au { font-style: italic; font-size: 12px; color: var(--mute); }
 .card .era { color: var(--mute); margin-top: auto; }

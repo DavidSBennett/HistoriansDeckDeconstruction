@@ -1,6 +1,7 @@
 # Architecture and decisions
 
-Status: build steps 1–7 done (2026-11-11); next is step 8, deploying to projecta.thehistorians.org. The original spec is [BRIEF.md](BRIEF.md); this file records what
+Status: build steps 1–8 built (2026-11-11). Going live needs the server setup and GitHub secrets in
+[DEPLOY.md](DEPLOY.md), then the first deploy and the two-browser smoke test. The original spec is [BRIEF.md](BRIEF.md); this file records what
 was decided since and where the mock-up's code differs from the brief.
 
 ## Decisions
@@ -25,7 +26,8 @@ was decided since and where the mock-up's code differs from the brief.
 5. ✔ PHP engine plus conformance: the JS engine records test games, the PHP engine replays them and must match exactly; GitHub Actions runs both (see "The PHP engine" below). **Review stop.**
 6. ✔ Shared login, DB migrations, PHP backend (lobby, polling, actions, server-side bots), tested end to end over HTTP (see "Backend and login" below).
 7. ✔ React client, using the mock-up's layout and click flow (see "The client" below).
-8. Deploy workflow to projecta.thehistorians.org; first migration run by hand; two-browser smoke test.
+8. ✔ Deploy workflow to projecta.thehistorians.org (see "Deploying" below). Still to do by hand: the server
+   setup, the GitHub secrets, the first migration, and the two-browser smoke test, all in [DEPLOY.md](DEPLOY.md).
 
 ## Rules changes (step 3)
 
@@ -372,6 +374,42 @@ Found and fixed along the way:
 engine and protocol tests, but not tried in the browser); a game between two human players on two browsers;
 phone-width layout.
 
+## Deploying (step 8)
+
+`.github/workflows/deploy.yml` runs on every push to `main` and by hand. It is modelled on Board's
+`deploy-board.yml`, with three changes.
+
+1. The whole test suite (`test.yml`, now reusable) runs first, and nothing uploads unless it passes.
+2. The opcode-cache reset token is a GitHub secret (`OPCACHE_TOKEN`) and `DK_OPCACHE_TOKEN` in
+   `config.secret.php`, never written into the repo.
+3. A health check (`dk_health.php`) at the end fails the run, with the report in the log, if the server
+   isn't ready.
+
+The upload works as Board's does:
+- `tools/publish.mjs` builds `publish/`, the exact document root;
+- rsync over SSH uploads it, never with `--delete` and never sending `config.secret.php`;
+- the opcode-cache reset runs and its result is printed;
+- the job skips itself, with a notice, until the SSH secrets exist.
+
+`dk_health.php` checks:
+- the PHP version and `pdo_mysql`;
+- `config.secret.php`, and that the engine and data files are present;
+- both database connections and their tables;
+- the deployed build and commit.
+
+It answers 200 or 503, and never shows credentials. A database that can't be reached now gets a plain 503
+message from every endpoint, instead of the driver's error text, which can name the database user.
+
+**Checked locally:** `publish/` (41 files, about 400 KB) served by PHP's built-in server with the dev
+database:
+- the health check passes;
+- sign-in, the API and the built app work;
+- the cache reset refuses without a token;
+- a broken database setting gives the plain message, with no username in it.
+
+Not checkable locally: the `.htaccess` rules (PHP's built-in server ignores them) and the workflow itself,
+which runs only on GitHub.
+
 ## Repository layout
 
 ```
@@ -408,6 +446,23 @@ frontend/    React 18 + Vite 5 client, plain JS; imports engine/js through the @
   - In this deck chronology follows the theses almost exactly (A ≈ 1–11, B 9–20, C 21–30, D 31–40), so
     Sequence sets nearly always come from one thesis.
 - The CSV's `bonus` column (1 on every card) isn't used: bonuses come from the source type.
+- **Card pictures** (2026-11-11) come from `Historians-Deck-Builder/AI History/photo-gallery`, through the
+  importer's `--images` option.
+  - A file named `<thesis letter><sequence number>` (`a1.jpg`, `c10.jpg`) belongs to that card.
+  - `.jpg` wins when there are several: `c10.jpg` is the clean Shakey photo, `c10.png` a letterboxed screenshot.
+  - Each picture is resized with PHP's GD library (`tools/resize-images.php`) to at most 640 px and saved as
+    `data/decks/<id>/images/<A1>.jpg`. The card's `image` field names that file.
+  - 38 of 40 cards have a picture, 1.7 MB in all, down from 36 MB of originals. C8 (the Lighthill debate) and
+    D3 (the Moscow missile-defence map) have none, and show a placeholder in the thesis colour.
+  - The CSV's `image_url` is kept as `imageUrl`, and its `description` as `imageCredit`. The full-card view
+    shows the credit under the picture, so check that each credit describes the gallery file now used.
+  - The client asks for `/decks/<id>/images/<file>`. Vite serves it from `data/` in development, and
+    `tools/publish.mjs` copies the images there for the server (the rest of `data/` stays locked).
+  - Each card has an image band under its header: 96 px tall, 60 px on bookshelf cards, with the picture
+    cropped to fill it.
+  - **Rights:** the deck's `IMAGES.md` describes the McCorduck book gallery as CC BY-NC-ND 4.0, "fine for
+    personal print-and-play, check before any commercial use", and some pictures are screenshots from
+    institutional sites. A public website is a different use from print-and-play, so check before going live.
 - Simulated against the mock-up's deck (seeds 1–1,000, medium): 2 players 93.3 / 69.9 (was 90.5 / 68.5);
   3 players 126.2 / 103.1 / 81.6; 4 players 163.6 / 138.7 / 119.1 / 94.7. Field win rates stay even;
   A is slightly weaker in 3- and 4-player games.

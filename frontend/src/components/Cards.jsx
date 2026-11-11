@@ -1,7 +1,19 @@
+import { useEffect } from "react";
+
 // Card faces, ported from the mock-up's srcHTML / actHTML / trashHTML. `G` is the view (its cards lookup
 // says what each card id is), `R` the game's rules.
 
 export const color = (R, L) => R.theses[L]?.color || "#555";
+
+/** The picture's URL for a card, or null. Pictures are served from /decks/<deck id>/images/. */
+export const imageUrl = (R, d) => (d.image && R.deck?.id ? `/decks/${R.deck.id}/images/${d.image}` : null);
+
+/** The image space on a card face: the picture, or a placeholder in the thesis colour. */
+function Picture({ R, d }) {
+  const url = imageUrl(R, d);
+  if (url) return <img className="pic" src={url} alt="" loading="lazy" draggable="false" />;
+  return <div className="pic none" style={{ background: color(R, d.arg) }} aria-hidden="true"><span className="mono">{d.type}</span></div>;
+}
 
 export function Tags({ R, d }) {
   return (
@@ -23,6 +35,7 @@ export function SourceCard({ R, d, cls = "", onClick, mini, foot, onRead }) {
   return (
     <div {...clickProps(onClick, "card " + cls + (mini ? " mini" : ""))}>
       <div className="hd mono"><span>{d.type}</span><span>{d.date}</span></div>
+      <Picture R={R} d={d} />
       <div className="bd">
         <div className="ti">{d.title}</div>
         {!mini && <div className="au">{d.author}</div>}
@@ -69,6 +82,12 @@ export function Card({ G, R, uid, ...rest }) {
 }
 
 export function Modal({ children, onClose }) {
+  useEffect(() => {
+    if (!onClose) return;
+    const key = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [onClose]);
   return (
     <div className="ov" onClick={onClose ? (e) => e.target === e.currentTarget && onClose() : undefined}>
       <div className="modal" role="dialog" aria-modal="true">{children}</div>
@@ -78,8 +97,15 @@ export function Modal({ children, onClose }) {
 
 export function ReadCard({ R, d, onClose }) {
   const b = R.bonuses[d.type];
+  const url = imageUrl(R, d);
   return (
     <Modal onClose={onClose}>
+      {url && (
+        <figure className="fullpic">
+          <img src={url} alt={d.title} />
+          {d.imageCredit && <figcaption>Image: {d.imageCredit}</figcaption>}
+        </figure>
+      )}
       <div className="mono" style={{ color: "var(--mute)" }}>{d.type} · {d.date}</div>
       <h3>{d.title}</h3>
       <div className="au" style={{ fontStyle: "italic" }}>{d.author}</div>

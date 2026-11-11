@@ -22,7 +22,9 @@ Needs Node 22 or later, and PHP 8.1 or later for the PHP checks. There are no de
 | `npm run lint:php` | Syntax-checks every PHP file. |
 | `npm run test:backend` | Runs the PHP backend on PHP's built-in server with a throwaway SQLite database and tests it over HTTP. |
 
-Installing on GreenGeeks: [database/INSTALL.md](database/INSTALL.md).
+Going live on GreenGeeks: [docs/DEPLOY.md](docs/DEPLOY.md) (server setup in
+[database/INSTALL.md](database/INSTALL.md)). After that, every push to `main` tests, builds and deploys to
+projecta.thehistorians.org; `node tools/publish.mjs` builds the same upload folder locally.
 
 ## Playing it locally
 
@@ -62,8 +64,10 @@ After editing, run `npm run data:validate`, then `npm run sim` to see the effect
 The AI History deck is built from the Historians-Deck-Builder spreadsheet. After changing the CSV, rebuild it:
 
 ```bash
-npm run deck:import -- "../Historians-Deck-Builder/AI History/deck/ai-history-deck.csv" ai-history --name "AI History"
+npm run deck:import -- "../Historians-Deck-Builder/AI History/deck/ai-history-deck.csv" ai-history --name "AI History" --images "../Historians-Deck-Builder/AI History/photo-gallery"
 ```
 
-It prints the chronological numbering and checks the deck before writing it. Compare decks with
+It prints the chronological numbering and checks the deck before writing it. `--images` takes each card's
+picture from the gallery by name (`a1.jpg` is card A1, `c10.jpg` is C10), shrinks it for the web, and saves it
+in `data/decks/ai-history/images/`. Cards without a picture show a placeholder. Compare decks with
 `npm run sim -- --deck ai-history-mockup`.

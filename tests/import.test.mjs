@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseCsv, earliestDate, buildDeck } from "../tools/import-deck-csv.mjs";
+import fs from "node:fs";
+import { parseCsv, earliestDate, buildDeck, findImages } from "../tools/import-deck-csv.mjs";
 import { loadData, validateData } from "../tools/validate-data.mjs";
 
 test("CSV parsing handles quotes, doubled quotes, commas and newlines inside fields", () => {
@@ -43,6 +44,19 @@ test("a CSV becomes a deck: theses from conclusion rows, chronological numbers, 
   assert.deepEqual(deck.cards.map((c) => [c.title, c.num]), [["Later", 2], ["Earlier", 1], ["Latest", 3]]);
   assert.equal(deck.cards[1].quote, '"a quote"');
   assert.deepEqual([deck.cards[1].era, deck.cards[1].stance, deck.cards[1].sub], ["Era One", "Builder", "B"]);
+});
+
+test("pictures are matched by thesis letter and sequence number, preferring .jpg", () => {
+  const cards = [{ arg: "A", seq: "1" }, { arg: "C", seq: "10" }, { arg: "C", seq: "8" }, { arg: "D", seq: "2" }];
+  const files = ["a1.jpg", "C10.png", "c10.jpg", "d2.GIF", "Screenshot 2026-11-10.png", "01-portrait.jpeg", "a1.txt"];
+  assert.deepEqual(findImages(cards, files), ["a1.jpg", "c10.jpg", null, "d2.GIF"]);
+});
+
+test("every picture a card names exists in the deck's images folder", () => {
+  const { deck } = loadData("ai-history");
+  const named = deck.cards.filter((c) => c.image);
+  assert.ok(named.length >= 30);
+  for (const c of named) assert.ok(fs.existsSync(new URL(`../data/decks/ai-history/images/${c.image}`, import.meta.url)), c.image);
 });
 
 test("the AI History deck in data/ is the Historians-Deck-Builder CSV edition", () => {

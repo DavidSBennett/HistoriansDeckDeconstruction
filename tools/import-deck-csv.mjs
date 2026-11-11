@@ -1,11 +1,15 @@
 // Builds data/decks/<id>/deck.json from a Historians deck CSV (the Historians-Deck-Builder format).
-//   node tools/import-deck-csv.mjs <deck.csv> <deck id> [--name "AI History"] [--dry-run]
+//   node tools/import-deck-csv.mjs <deck.csv> <deck id> [--name "AI History"] [--images <folder>] [--dry-run]
 //
 // Source rows (card_identifier "archive") become cards; conclusion rows (card_identifier "conclusion") become
 // the theses. Column mapping:
 //   sequence_number -> seq      source_type -> type     location -> quote (the CSV keeps the quote there)
 //   argument -> arg             sub_argument -> sub     context_tags "Era|Stance" -> era, stance
-//   image_url -> image          description -> imageCredit (both extra; the engine ignores them)
+//   image_url -> imageUrl       description -> imageCredit (extra fields; the engine ignores them)
+// --images: a folder of card pictures named <thesis letter><sequence number>, e.g. a1.jpg, c10.png (any case;
+// .jpg is preferred when there are several). Each is resized to at most 640 px and saved as
+// data/decks/<id>/images/<A1>.jpg, and the card's `image` field names it. Cards without a picture get
+// image "" and the client draws a placeholder. Needs PHP with the GD extension (loaded per command).
 //   conclusion title "Thesis X: question" -> theses[X].q; article_titles / book_titles split on " | "
 // `num`, the chronological number the Sequence set uses, is computed: cards are ordered by the earliest date
 // their date text mentions (a year alone counts as the start of that year), ties in CSV order. The order is
@@ -13,6 +17,7 @@
 // Thesis colours are kept from the deck being replaced, or taken from the default palette.
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { validateData, loadData } from "./validate-data.mjs";
 
@@ -98,7 +103,8 @@ export function buildDeck(csvText, { id, name, colors = {} }) {
       stance,
       quote: col(r, "location"),
       num: 0,
-      image: col(r, "image_url"),
+      image: "",
+      imageUrl: col(r, "image_url"),
       imageCredit: col(r, "description"),
       _row: row,
     };
@@ -114,9 +120,56 @@ export function buildDeck(csvText, { id, name, colors = {} }) {
   return { deck: { id, name, theses: ordered, cards }, chron };
 }
 
+const IMAGE_EXT = ["jpg", "jpeg", "png", "gif", "webp"];
+
+/** For each card, the picture in `dir` named <letter><seq> (preferring .jpg), or null. */
+export function findImages(cards, files) {
+  const byKey = {};
+  for (const f of files) {
+    const m = f.match(/^([a-z])(\d+)\.([a-z]+)$/i);
+    if (!m || !IMAGE_EXT.includes(m[3].toLowerCase())) continue;
+    const key = m[1].toUpperCase() + Number(m[2]);
+    const rank = IMAGE_EXT.indexOf(m[3].toLowerCase());
+    if (!byKey[key] || rank < byKey[key].rank) byKey[key] = { file: f, rank };
+  }
+  return cards.map((c) => byKey[c.arg + Number(c.seq)]?.file ?? null);
+}
+
+function attachImages(deck, dir, outDir) {
+  const files = fs.readdirSync(dir);
+  const found = findImages(deck.cards, files);
+  const manifest = { max: 640, quality: 82, files: [] };
+  deck.cards.forEach((c, i) => {
+    if (!found[i]) return;
+    c.image = `${c.arg}${Number(c.seq)}.jpg`;
+    manifest.files.push({ in: path.join(dir, found[i]), out: path.join(outDir, c.image) });
+  });
+  const tmp = path.join(ROOT, "build", "image-manifest.json");
+  fs.mkdirSync(path.dirname(tmp), { recursive: true });
+  fs.writeFileSync(tmp, JSON.stringify(manifest));
+  fs.rmSync(outDir, { recursive: true, force: true });
+  const mods = execFileSync("php", ["-m"], { encoding: "utf8" }).toLowerCase().split(/\r?\n/);
+  const php = mods.includes("gd") ? [] : ["-d", "extension=gd"];
+  const lines = execFileSync("php", [...php, path.join(ROOT, "tools", "resize-images.php"), tmp], { encoding: "utf8" }).trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  const failed = lines.filter((l) => l.error);
+  for (const f of failed) {
+    const c = deck.cards.find((x) => path.join(outDir, x.image) === manifest.files.find((m) => m.in === f.in)?.out);
+    if (c) c.image = "";
+    console.log(`  image error: ${path.basename(f.in)}: ${f.error}`);
+  }
+  const ok = lines.filter((l) => !l.error);
+  const kb = ok.reduce((t, l) => t + l.bytes, 0) / 1024;
+  const missing = deck.cards.filter((c) => !c.image).map((c) => `${c.arg}${c.seq} ${c.title}`);
+  const unused = files.filter((f) => /\.(jpe?g|png|gif|webp)$/i.test(f) && !found.includes(f));
+  console.log(`Images: ${ok.length} of ${deck.cards.length} cards, ${kb.toFixed(0)} KB in all.`);
+  if (missing.length) console.log("  no picture for: " + missing.join("; "));
+  if (unused.length) console.log(`  ${unused.length} other files in the folder were not used (they are not named <letter><number>).`);
+}
+
 function main() {
   const args = process.argv.slice(2);
-  const [csvFile, id] = args.filter((a, i) => !a.startsWith("--") && !(args[i - 1] || "").startsWith("--name"));
+  const valued = new Set(["--name", "--images"]);
+  const [csvFile, id] = args.filter((a, i) => !a.startsWith("--") && !valued.has(args[i - 1]));
   if (!csvFile || !id || !/^[a-z0-9-]+$/.test(id)) {
     console.error('Usage: node tools/import-deck-csv.mjs <deck.csv> <deck id> [--name "Deck name"] [--dry-run]');
     process.exit(2);
@@ -139,6 +192,7 @@ function main() {
   console.log("Source types: " + Object.entries(types).map(([t, n]) => `${t} ${n}`).join(", "));
   if (errors.length) process.exit(1);
   if (args.includes("--dry-run")) return;
+  if (args.includes("--images")) attachImages(deck, args[args.indexOf("--images") + 1], path.join(path.dirname(out), "images"));
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify(deck, null, 2) + "\n");
   console.log("wrote " + path.relative(ROOT, out));
