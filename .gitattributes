@@ -1,0 +1,4 @@
+# LF everywhere: the JS and PHP engines are compared by hashing JSON, so line endings must not vary.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+publish/
+coverage/
+.DS_Store
+Thumbs.db
+
+# server secrets (never commit; templates are *.example.php)
+config.secret.php
+dbConfig.php
+backend/vendor/
+
+# local scratch
+*.log
+.env
+.env.local

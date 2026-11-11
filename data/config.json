@@ -1,0 +1,43 @@
+{
+  "handSize": 5,
+  "paperPts": 2,
+  "articlePts": 4,
+  "bookCardPts": {
+    "3": 5,
+    "4": 8,
+    "5": 13,
+    "6": 19,
+    "7": 26,
+    "8": 34
+  },
+  "bookBonus": 4,
+  "citePts": 2,
+  "bookMin": 4,
+  "bookMinFromHand": 2,
+  "rounds": {
+    "short": 6,
+    "medium": 10,
+    "long": 14
+  },
+  "upgradeCopies": 2,
+  "runMin": 3,
+  "runPts": 12,
+  "typesMin": 5,
+  "typesPts": 12,
+  "startCards": 5,
+  "trashPerStack": 3,
+  "trashPenalty": 1,
+  "keepCards": 1,
+  "startingActions": [
+    "conference",
+    "article",
+    "book",
+    "research",
+    "network",
+    "organize"
+  ],
+  "seats": {
+    "min": 2,
+    "max": 4
+  }
+}

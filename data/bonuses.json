@@ -1,0 +1,37 @@
+{
+  "Map": {
+    "name": "Finding Aid",
+    "amt": 1,
+    "text": "Research: look at 1 more card than you take, then put 1 back."
+  },
+  "Letter": {
+    "name": "Correspondence",
+    "amt": 2,
+    "text": "Network: your discards count as 2 more."
+  },
+  "Speech": {
+    "name": "Platform",
+    "amt": 1,
+    "text": "Conference papers: +1 prestige."
+  },
+  "Report": {
+    "name": "Findings",
+    "amt": 1,
+    "text": "Articles: +1 prestige."
+  },
+  "Photograph": {
+    "name": "Illustration",
+    "amt": 2,
+    "text": "Books: +2 prestige."
+  },
+  "Newspaper": {
+    "name": "Publicity",
+    "amt": 2,
+    "text": "When a rival cites you: +2 prestige."
+  },
+  "Diary": {
+    "name": "Notebook",
+    "amt": 1,
+    "text": "End of turn: keep 1 more card."
+  }
+}

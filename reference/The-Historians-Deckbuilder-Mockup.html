@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Historians: deck-building mock-up</title>
+<style>
+:root{--paper:#f6f1e6;--panel:#fffdf8;--ink:#2b2622;--mute:#7a7167;--line:#d9d0bf;--bar:#3a332d;--gold:#a8862f;
+--A:#7b2d2d;--B:#2d587b;--C:#2f7a52;--D:#7d5a2c;--sel:#e0a100}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;font-size:15px;line-height:1.35}
+button{font:inherit;cursor:pointer;border:1px solid var(--bar);background:var(--bar);color:#fff;border-radius:4px;padding:6px 12px}
+button.ghost{background:transparent;color:var(--ink)}
+button:disabled{opacity:.4;cursor:not-allowed}
+h1{font-size:22px;margin:0}
+h2{font-size:12px;letter-spacing:.18em;text-transform:uppercase;margin:0 0 8px;color:var(--mute);font-weight:700}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header .sp{flex:1}
+.score{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:#fff;font-size:13px}
+.chip.cur{border-color:var(--bar);box-shadow:0 0 0 2px var(--bar) inset;font-weight:700}
+main{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:14px;padding:14px 16px 150px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.stack{width:170px;border-radius:8px;color:#fff;padding:10px;min-height:150px;display:flex;flex-direction:column;border:3px solid transparent}
+.stack .L{font-size:40px;font-weight:700;line-height:1}
+.stack .q{font-size:13px;flex:1;margin:6px 0}
+.stack.target,.up.target{border-color:var(--sel);cursor:pointer;box-shadow:0 0 0 3px rgba(224,161,0,.35)}
+.card.target{border-color:var(--sel);border-style:dashed;cursor:pointer}
+.stack.empty{opacity:.35}
+.up{width:150px;border:3px solid var(--bar);border-radius:8px;background:#fff;padding:8px;display:flex;flex-direction:column;gap:4px}
+.up.gone{opacity:.3}
+.up .nm,.act .nm{font-weight:700}
+.up .tx,.act .tx{font-size:12.5px;color:#4b443d}
+.val{display:inline-block;min-width:22px;text-align:center;border-radius:999px;background:var(--gold);color:#fff;font-weight:700;font-size:13px;padding:1px 6px}
+.card{width:176px;border:3px solid var(--line);border-radius:8px;background:#fff;display:flex;flex-direction:column;overflow:hidden;cursor:default;position:relative}
+.card.click{cursor:pointer}
+.card.sel{border-color:var(--sel);border-style:solid;box-shadow:0 0 0 3px rgba(224,161,0,.35);transform:translateY(-6px)}
+.card.dim{opacity:.4}
+.card .hd{background:var(--bar);color:#fff;padding:3px 7px;display:flex;justify-content:space-between;gap:6px}
+.card .bd{padding:7px;display:flex;flex-direction:column;gap:3px;flex:1}
+.card .ti{font-weight:700;line-height:1.15}
+.card .au{font-style:italic;font-size:12px;color:var(--mute)}
+.card .era{color:var(--mute);margin-top:auto}
+.tags{display:flex;gap:4px;align-items:center;margin-top:3px}
+.tg{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:4px;color:#fff;font-weight:700}
+.tg.s{width:19px;height:19px;font-size:12px;background:#fff!important;border:2px solid}
+.read{font-size:12px;text-decoration:underline;color:var(--B);cursor:pointer;background:none;border:0;padding:0;margin-left:auto}
+.act{border-color:var(--bar);background:#f1ebdc}
+.act .hd{background:var(--gold)}
+.act.played{opacity:.45}
+.bonus{font-size:12px;background:#f3ecd6;border-left:3px solid var(--gold);padding:2px 5px;margin-top:3px}
+.bonus b{font-weight:700}
+.num{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;border-radius:12px;border:2px solid var(--bar);font-weight:700;font-size:13px;padding:0 5px;background:#fff}
+.bsum{font-size:13px;margin:2px 0 8px}
+.trash{border-color:#9a948b;background:#e9e6e0}
+.trash .hd{background:#77716a}
+.trash .nm{font-weight:700}
+.trash .tx{font-size:12.5px;color:#5c564f;font-style:italic}
+.pick{flex:1;min-width:150px;cursor:pointer;border:3px solid transparent}
+.pick:hover{border-color:var(--sel)}
+.pick.off{opacity:.35;cursor:not-allowed}
+.mini{width:150px}
+.mini .ti{font-size:13px}
+.used{font-size:11px;color:var(--mute)}
+.pl{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.pl:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.pl .nm{font-weight:700}
+.cv{font-size:13px;color:#4b443d;margin:4px 0 8px}
+#dock{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:2px solid var(--bar);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;z-index:5}
+#dock .msg{flex:1;min-width:240px}
+#dock .st{font-size:13px;color:var(--mute)}
+#log{font-size:13px;max-height:70vh;overflow:auto}
+#log div{padding:3px 0;border-bottom:1px dotted var(--line)}
+#log .t{color:var(--mute)}
+.ov{position:fixed;inset:0;background:rgba(40,34,28,.55);display:flex;align-items:flex-start;justify-content:center;padding:5vh 12px;z-index:20;overflow:auto}
+.modal{background:var(--panel);border-radius:10px;max-width:760px;width:100%;padding:20px;border:1px solid var(--line)}
+.modal h3{margin:0 0 8px;font-size:20px}
+.modal .q{text-align:center;font-size:17px;margin:12px 24px}
+.modal .sig{font-style:italic;border-top:1px dotted var(--mute);padding-top:8px;margin-top:8px}
+.modal .cit{font-size:12px;color:var(--mute);margin-top:10px}
+.modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+table{border-collapse:collapse;width:100%}td,th{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
+select,input{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:#fff}
+.rules li{margin-bottom:5px}
+.note{font-size:12.5px;color:var(--mute)}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>The Historians</h1><div class="mono" style="color:var(--mute)">AI History · deck-building mock-up</div></div>
+  <div class="sp"></div>
+  <div class="score" id="score"></div>
+  <button class="ghost" id="bRules">Rules</button>
+  <button class="ghost" id="bNew">New game</button>
+</header>
+<main>
+  <div>
+    <div class="panel"><h2>The archive: four argument stacks</h2><div class="row" id="stacks"></div></div>
+    <div class="panel"><h2>Conference space: upgrade cards</h2><div class="row" id="market"></div></div>
+    <div class="panel"><h2>Rivals</h2><div id="rivals"></div></div>
+    <div class="panel"><h2 id="meTitle">You</h2><div id="me"></div></div>
+    <div class="panel"><h2>Your hand</h2><div class="row" id="hand"></div>
+      <div class="note" id="piles" style="margin-top:10px"></div></div>
+  </div>
+  <div><div class="panel"><h2>Log</h2><div id="log"></div></div></div>
+</main>
+<div id="dock"><div class="msg"><div id="prompt"></div><div class="st" id="status"></div></div><div id="btns" class="row"></div></div>
+<div id="ovroot"></div>
+<script>
+"use strict";
+const DATA = {"theses": {"A": {"q": "Did a small circle of founders set AI's course for decades?", "articles": ["The Dartmouth Summer", "A Lecture on Thinking Machines", "The Chess Prophecy", "Letters of the Founding Circle", "Theseus in the Maze", "The First Forecast", "A Device That Learns", "Ten Men and a Proposal", "The Brain Modellers", "Predictions of 1957"], "books": ["The Founding Generation", "When the Field Got Its Name", "A Summer at Dartmouth", "The Automata Makers", "Prophets of the Thinking Machine", "The Cybernetics Circle", "The First Decade of AI", "The ACE and After", "Minds and Machines, 1956", "Giants of the Founding Era"]}, "B": {"q": "Did AI's critics understand the field better than its builders?", "articles": ["The Mirage Debate", "Alchemy at RAND", "The Chinese Room Opens", "A Quarrel in the Newsletter", "The Humanists Object", "Beer Cans and Windmills", "A Match Against the Skeptic", "The Lighthill Verdict", "Reason and Power", "The Software Doubters"], "books": ["The Dissenters", "The Critics' Decade", "Philosophers Against the Machine", "The Great AI Debates", "From ELIZA to Star Wars", "The Limits of the Machine", "Arguing with the Future", "The Skeptics' Case", "Minds Against Machines", "What Machines Could Not Do"]}, "C": {"q": "Did patronage - government and corporate money - drive AI's booms and winters?", "articles": ["The Intergalactic Memo", "Four Nodes in December", "The ALPAC Verdict", "A Plan for Strategic Computing", "The Heilmeier Years", "Naming the Winter", "The Lost Generation", "A Banquet at the Boom", "The Patron's Portrait", "Machines in a Museum"], "books": ["Patrons and Winters", "The Funding of a Field", "ARPA's Children", "The Fifth Generation Race", "Boom, Bust, and Budget", "The Sponsored Mind", "Winters of Discontent", "The Billion-Dollar Question", "Money and Machines", "When the Tap Closed"]}, "D": {"q": "Did AI ever truly leave the laboratory?", "articles": ["The Robot in the Room", "A Program for the Wards", "The DENDRAL Papers", "Harpy Hears a Thousand Words", "An Artist and His Machine", "Match of the Century", "The Team Behind the Machine", "A Network of Laboratories", "The Possible Dream", "Maps of a Small World"], "books": ["From Lab to World", "The Applied Mind", "Expert Systems and After", "The Robot's First Steps", "When Machines Went to Work", "The Uses of Intelligence", "Out of the Laboratory", "The Deployment Question", "Machines at Large", "The Long Road to Products"]}}, "cards": [{"seq": "1", "date": "c. November 19, 1946", "type": "Letter", "title": "Turing Writes to Ashby About the ACE", "content": "A two-page signed letter from the National Physical Laboratory to the psychiatrist W. Ross Ashby, discussing the planned ACE computer.", "significance": "Turing confides he is more interested in producing models of the action of the brain than in practical computing, and urges Ashby to run his experiments on the ACE - the brain-modelling ambition stated privately a decade before the field had a name.", "author": "Alan M. Turing", "arg": "A", "sub": "", "citation": "W. Ross Ashby Digital Archive (ashby.info), scan courtesy of the National Physical Laboratory; carbon copy in the Turing Archive for the History of Computing, item L23-001", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "Builder", "quote": "\"In working on the ACE I am more interested in the possibility of producing models of the action of the brain than in the practical applications of computing.\"", "num": 2}, {"seq": "1", "date": "November 8, 1987", "type": "Diary", "title": "McCorduck's Journal: A Panel at the Art Institute", "content": "A dated entry in McCorduck's handwritten journal describing a panel on computers and art at the Art Institute of Chicago, written the evening of the event.", "significance": "A working chronicler of AI records in real time the gulf between the arts-humanities world and the computing world - the fault line this deck's debates run along.", "author": "Pamela McCorduck", "arg": "B", "sub": "", "citation": "Pamela McCorduck's journals, Carnegie Mellon University Archives, Hunt Library (currently closed to researchers); entry quoted in This Could Be Important (ETC Press, 2019)", "note": "", "era": "Dissent: From the Philosophers to Star Wars", "stance": "", "quote": "", "num": 34}, {"seq": "1", "date": "June 10-12, 1991", "type": "Speech", "title": "An Interview with Allen Newell", "content": "A transcribed oral-history interview conducted over three days in Pittsburgh by Arthur Norberg for the Charles Babbage Institute.", "significance": "Firsthand testimony on ARPA's patronage from a funded insider: Licklider's IPTO, the \"extreme adversity\" of the Heilmeier years when the speech program was killed, and the benign growth under Kahn - the boom-winter arc recounted by one who lived it. (Retrospective testimony, recorded 1991.)", "author": "Allen Newell", "arg": "C", "sub": "", "citation": "Charles Babbage Institute, OH 227; University of Minnesota Digital Conservancy, hdl.handle.net/11299/107544", "note": "Image: transcript PDF published by the UMN Digital Conservancy.", "era": "Patrons and Winters", "stance": "Builder", "quote": "", "num": 35}, {"seq": "1", "date": "October 1974", "type": "Report", "title": "The MYCIN Dissertation", "content": "A Stanford doctoral dissertation describing a rule-based consultation program that recommends antibiotic therapy for blood infections.", "significance": "MYCIN set the template for the expert-systems industry; a 1979 evaluation showed its advice matching Stanford specialists - yet it was never deployed on the wards, the central exhibit in the lab-to-world argument.", "author": "Edward H. Shortliffe", "arg": "D", "sub": "", "citation": "Stanford University Ph.D. dissertation (degree 1975); issued as Stanford AI Laboratory Memo AIM-251 / STAN-CS-74-465", "note": "", "era": "From Lab to World", "stance": "Builder", "quote": "", "num": 21}, {"seq": "2", "date": "June-August 1956", "type": "Diary", "title": "Solomonoff's Dartmouth Notebook", "content": "A participant's handwritten notebook and dated daily notes kept through the 1956 Dartmouth Summer Research Project.", "significance": "Solomonoff was one of the few people present for the whole summer; his dated notes are the principal surviving day-by-day record of the workshop where artificial intelligence got its name.", "author": "Ray Solomonoff", "arg": "A", "sub": "", "citation": "Solomonoff estate collection; complete scans published at raysolomonoff.com, Dartmouth section", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "Builder", "quote": "\"This idea may, indeed, work.\"", "num": 8}, {"seq": "2", "date": "1973", "type": "Speech", "title": "The General Purpose Robot is a Mirage", "content": "A televised Royal Institution debate in which the author of a government-commissioned review of AI defends his conclusions against John McCarthy, Donald Michie, and Richard Gregory.", "significance": "The only AI funding fight of the era played out on national television; the report behind it precipitated Britain's deep cuts to AI research. The full 81-minute recording survives.", "author": "Sir James Lighthill", "arg": "B", "sub": "", "citation": "Recording preserved by AIAI, University of Edinburgh (BBC broadcast, June 1973); Lighthill's report Artificial Intelligence: A General Survey (1972) hosted alongside", "note": "", "era": "Dissent: From the Philosophers to Star Wars", "stance": "Critic", "quote": "\"In no part of the field have the discoveries made so far produced the major impact that was then promised.\"", "num": 19}, {"seq": "2", "date": "1966", "type": "Report", "title": "Language and Machines: The ALPAC Report", "content": "An advisory-committee report to the National Research Council assessing the state and prospects of machine translation and computational linguistics.", "significance": "Its negative verdict ended most US government machine-translation funding - the canonical case of a sponsor's report switching patronage off, and the template for later AI winters.", "author": "Automatic Language Processing Advisory Committee (John R. Pierce, chair)", "arg": "C", "sub": "", "citation": "National Academy of Sciences - National Research Council, Publication 1416 (1966); National Academies Press record 9547", "note": "", "era": "Patrons and Winters", "stance": "Critic", "quote": "\"we do not have useful machine translation. Further, there is no immediate or predictable prospect of useful machine translation.\"", "num": 14}, {"seq": "2", "date": "c. 1968-1970", "type": "Photograph", "title": "Shakey the Robot", "content": "A photographic print of Stanford Research Institute's mobile robot Shakey in its experimental environment.", "significance": "Shakey was the first mobile robot to reason about its own actions, integrating perception, planning, and action - the laboratory's most photogenic claim that AI could operate in physical space.", "author": "Unrecorded photographer (SRI)", "arg": "D", "sub": "", "citation": "Computer History Museum, catalog 102695825, accession X3501.2006; the robot itself is CHM lot X279.83, gift of SRI International", "note": "", "era": "From Lab to World", "stance": "Builder", "quote": "\"Experimental Mobile Automaton (\"Shakey\")\" (catalogue caption)", "num": 16}, {"seq": "3", "date": "November 14, 1957", "type": "Speech", "title": "Heuristic Problem Solving: The Next Advance in Operations Research", "content": "A banquet address to the Operations Research Society of America in Pittsburgh, published in the society's journal.", "significance": "Here Simon predicted that within ten years a computer would be chess champion of the world and would prove an important new theorem - the founders' boldest public timetable, rebuked in print by Richard Bellman in the same journal.", "author": "Herbert A. Simon", "arg": "A", "sub": "B", "citation": "Operations Research 6(1):1-10 (1958), INFORMS; Herbert A. Simon Collection, Carnegie Mellon University Archives", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "Builder", "quote": "", "num": 9}, {"seq": "3", "date": "December 1965", "type": "Report", "title": "Alchemy and Artificial Intelligence", "content": "A RAND Corporation paper examining the difficulties of simulating human cognitive processes on digital computers.", "significance": "The founding document of philosophical AI criticism, written from inside the builders' own think tank - the first sustained argument that the field's early successes would not scale. It grew into What Computers Can't Do.", "author": "Hubert L. Dreyfus", "arg": "B", "sub": "C", "citation": "RAND Corporation, Paper P-3244, Santa Monica, CA; federally archived as DTIC AD0625719", "note": "", "era": "Dissent: From the Philosophers to Star Wars", "stance": "Critic", "quote": "", "num": 13}, {"seq": "3", "date": "ca. 1963", "type": "Photograph", "title": "Licklider at ARPA", "content": "A portrait photograph of J.C.R. Licklider from the period of his service at the Advanced Research Projects Agency.", "significance": "As first director of ARPA's Information Processing Techniques Office, Licklider created the funding pipeline that built American AI and computing research - the patron's face as the patronage began.", "author": "Unrecorded photographer", "arg": "C", "sub": "D", "citation": "MIT Museum, General Collection Photographs, object GCP-00014869", "note": "", "era": "Patrons and Winters", "stance": "Builder", "quote": "", "num": 11}, {"seq": "3", "date": "1984 (experiments 1966-1972)", "type": "Map", "title": "Map of Shakey's Experimental Environment", "content": "A plan of the rooms, doorways, and corridors of the robot's test environment at SRI, printed in the project's summary technical report.", "significance": "The literal world the first AI robot had to navigate - a cartographic record of how small that first world was, and of the planning problems it posed.", "author": "Nils J. Nilsson, ed. (SRI)", "arg": "D", "sub": "A", "citation": "\"Shakey the Robot,\" SRI AI Center Technical Note 323 (April 1984); copies at SRI and the Computer History Museum (catalog 102659872)", "note": "", "era": "From Lab to World", "stance": "Builder", "quote": "", "num": 28}, {"seq": "4", "date": "August 31, 1955", "type": "Report", "title": "A Proposal for the Dartmouth Summer Research Project on Artificial Intelligence", "content": "A 17-page typescript proposing a two-month, ten-man summer study of \"artificial intelligence\" at Dartmouth College.", "significance": "The document that named the field: the first known use of the term artificial intelligence, written by four men who would dominate the discipline's first decades.", "author": "John McCarthy, Marvin Minsky, Nathaniel Rochester, Claude Shannon", "arg": "A", "sub": "C", "citation": "Typescript copies in Dartmouth College's Rauner Special Collections and the Stanford McCarthy papers; reprinted in AI Magazine 27(4), 2006", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "Builder", "quote": "\"The study is to proceed on the basis of the conjecture that every aspect of learning or any other feature of intelligence can in principle be so precisely described that a machine can be made to simulate it.\"", "num": 7}, {"seq": "4", "date": "c. 1967", "type": "Photograph", "title": "McCarthy at the Chess Console", "content": "A photograph of John McCarthy seated at the console of Stanford's IBM 7090, testing a computer chess program.", "significance": "Chess was the ground the critics chose: Dreyfus ridiculed chess programs, and the builders answered over the board - MIT's MacHack VI defeated Dreyfus himself in 1967.", "author": "Unrecorded photographer (courtesy Stanford University)", "arg": "B", "sub": "D", "citation": "Computer History Museum, accession L062302006, courtesy Stanford University; the 1967 Dreyfus-vs-MacHack game tape is CHM catalog 102689842", "note": "", "era": "Dissent: From the Philosophers to Star Wars", "stance": "Builder", "quote": "\"John McCarthy, artificial intelligence pioneer, playing chess at Stanford's IBM 7090\" (catalogue caption)", "num": 15}, {"seq": "4", "date": "December 1969", "type": "Map", "title": "The Four-Node ARPANET", "content": "A hand-drawn pencil map of the ARPA computer network as of December 1969, showing its first four nodes at UCLA, SRI, UCSB, and Utah.", "significance": "The famous first map of the ARPA-funded network: a concrete product of IPTO patronage, built by the same funding stream that sustained the AI laboratories at its nodes.", "author": "Draughtsman unrecorded (ARPA/BBN network project)", "arg": "C", "sub": "A", "citation": "Computer History Museum, catalog 102658020, accession X7413.2015", "note": "", "era": "Patrons and Winters", "stance": "Builder", "quote": "", "num": 17}, {"seq": "4", "date": "May 12, 1997", "type": "Newspaper", "title": "Swift and Slashing, Computer Topples Kasparov", "content": "A front-page news report of IBM's Deep Blue defeating world chess champion Garry Kasparov in the deciding game of their rematch.", "significance": "A machine's defeat of the reigning world champion on the front page of the paper of record: the moment laboratory AI became a mass public event - though critics noted Deep Blue was brute-force search, not understanding.", "author": "Bruce Weber", "arg": "D", "sub": "B", "citation": "The New York Times, May 12, 1997, pp. A1, A14", "note": "", "era": "From Lab to World", "stance": "", "quote": "", "num": 40}, {"seq": "5", "date": "ca. 1952", "type": "Photograph", "title": "Shannon and Theseus in the Maze", "content": "A publicity photograph of Claude Shannon guiding his relay-driven electric mouse, Theseus, through its maze at Bell Laboratories.", "significance": "Theseus was the era's most visible learning machine; this widely reproduced image made Shannon the public face of machine intelligence four years before the field had a name.", "author": "Bell Telephone Laboratories (publicity photograph)", "arg": "A", "sub": "D", "citation": "Computer History Museum, catalog 102630790, lot X7413.2015; the maze itself survives in the MIT Museum", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "Builder", "quote": "\"Claude Shannon moving his electric mouse in a maze.\" (catalogue caption)", "num": 6}, {"seq": "5", "date": "September 1985", "type": "Map", "title": "Moscow Ballistic Missile Defense", "content": "A Defense Department map, reproduced in a congressional assessment, locating the components of the Soviet anti-missile system around Moscow.", "significance": "The report around this map framed Congress's doubts that tens of millions of lines of battle-management software could ever be trusted - the fight that computer-professional dissenters like David Parnas and the CPSR carried into public view.", "author": "US Department of Defense (in US Congress, OTA)", "arg": "B", "sub": "A", "citation": "US Congress, Office of Technology Assessment, Ballistic Missile Defense Technologies, OTA-ISC-254 (GPO, September 1985), pp. 60-61; archived at the UNT CyberCemetery", "note": "Image: the OTA report is a US government publication, public domain.", "era": "Dissent: From the Philosophers to Star Wars", "stance": "Critic", "quote": "\"The Moscow ballistic missile defenses identified in the map at right include the Pushkino ABM radar\"", "num": 32}, {"seq": "5", "date": "June 5, 1992", "type": "Newspaper", "title": "'Fifth Generation' Became Japan's Lost Generation", "content": "A news report on Japan's conclusion of its ten-year Fifth Generation computer project, with the government offering the project's software to any taker.", "significance": "The dated obituary for the project that set off the 1980s funding race: after some 400 million dollars of ministry money, the sponsor walked away.", "author": "Andrew Pollack", "arg": "C", "sub": "B", "citation": "The New York Times, June 5, 1992; NYT archive", "note": "", "era": "Patrons and Winters", "stance": "Critic", "quote": "\"A bold 10-year effort by Japan to seize the lead in computer technology is fizzling to a close, having failed to meet many of its ambitious goals or to produce technology that Japan's computer industry wanted.\"", "num": 37}, {"seq": "5", "date": "October 2, 1973", "type": "Letter", "title": "A DENDRAL Memorandum", "content": "A four-page internal memorandum circulated among the DENDRAL project's leaders setting out the project's goals.", "significance": "DENDRAL - chemists, a geneticist, and AI researchers inferring molecular structure from mass-spectrometry data - was the first expert system applied to real science; this working correspondence shows the interdisciplinary machinery in motion.", "author": "Bruce Buchanan, Dennis Smith, Tom Rindfleisch, A. M. Duffield", "arg": "D", "sub": "C", "citation": "Joshua Lederberg Papers, Box 59, Folder 9, National Library of Medicine, Profiles in Science, ID 101584906X17025", "note": "Image: digitized by NLM Profiles in Science.", "era": "From Lab to World", "stance": "Builder", "quote": "", "num": 20}, {"seq": "6", "date": "November 1950", "type": "Map", "title": "The First Computer Weather Maps", "content": "Contoured 500-millibar forecast charts of North America, observed and machine-computed, published with the report of the first weather forecasts run on ENIAC.", "significance": "The first forecast maps ever produced by an electronic computer, from the Princeton project von Neumann built to prove his stored-program machine could take on problems once reserved for human judgment.", "author": "Jule Charney, Ragnar Fjortoft, John von Neumann", "arg": "A", "sub": "B", "citation": "Published in Tellus 2(4):237-254 (1950), Swedish Geophysical Society; DOI 10.1111/j.2153-3490.1950.tb00336.x", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "", "quote": "\"the computation time for a 24-hour forecast was about 24 hours, that is, we were just able to keep pace with the weather\"", "num": 5}, {"seq": "6", "date": "May 8, 1977", "type": "Newspaper", "title": "Experts Argue Whether Computers Could Reason, and if They Should", "content": "A New York Times report on the dispute among computer scientists over whether computers could, and should, be entrusted with reasoning.", "significance": "By 1977 the Weizenbaum-versus-establishment quarrel had escaped the journals and become public-square news; the headline fuses the two questions that split the field.", "author": "Byline unrecorded", "arg": "B", "sub": "C", "citation": "The New York Times, May 8, 1977; a clipping is preserved in the John R. Ehrman collection, Computer History Museum, catalog 102773561", "note": "", "era": "Dissent: From the Philosophers to Star Wars", "stance": "", "quote": "", "num": 25}, {"seq": "6", "date": "April 23, 1963", "type": "Letter", "title": "The Intergalactic Computer Network Memo", "content": "An internal ARPA memorandum from Licklider to his funded investigators about coordinating their research and linking their computing projects.", "significance": "The patron's own working memo: ARPA money deliberately knitting the early AI and computing centers into a community, sketching the networked vision ARPA would later fund into the ARPANET.", "author": "J.C.R. Licklider", "arg": "C", "sub": "D", "citation": "ARPA memorandum, Washington DC, April 23, 1963; reproduced from ARPA/IPTO records; full text republished by KurzweilAI.net (2001)", "note": "", "era": "Patrons and Winters", "stance": "Builder", "quote": "\"It seems to me to be interesting and important, nevertheless, to develop a capability for integrated network operation.\"", "num": 12}, {"seq": "6", "date": "c. 1970-71", "type": "Diary", "title": "Harold Cohen's Notebook 3", "content": "One of Cohen's dated working notebooks, with sketches of mazes grown stage by stage - early workings behind his drawing program AARON.", "significance": "The day-by-day record of an artist teaching a computer to draw; AARON went on to exhibit from Documenta to the Brooklyn Museum - art as AI's most public escape from the laboratory.", "author": "Harold Cohen", "arg": "D", "sub": "A", "citation": "Collection of the Harold Cohen Trust; exhibited in \"Harold Cohen: AARON,\" Whitney Museum of American Art, 2024", "note": "", "era": "From Lab to World", "stance": "Builder", "quote": "", "num": 18}, {"seq": "7", "date": "July 8, 1958", "type": "Newspaper", "title": "New Navy Device Learns By Doing", "content": "A news report on the Navy's demonstration of Frank Rosenblatt's perceptron, which taught itself in fifty trials to tell marked cards apart.", "significance": "The story relayed Navy claims that the machine would one day walk, talk, see, write, reproduce itself and be conscious of its existence - the founding era's defining specimen of press amplification of a founder's promises.", "author": "Byline unrecorded (UPI dispatch)", "arg": "A", "sub": "C", "citation": "The New York Times, July 8, 1958, p. 25; NYT TimesMachine", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "Builder", "quote": "\"will be able to walk, talk, see, write, reproduce itself and be conscious of its existence\"", "num": 10}, {"seq": "7", "date": "June 1976", "type": "Letter", "title": "An Unreasonable Book, and Weizenbaum's Reply", "content": "A published exchange in the ACM SIGART Newsletter: McCarthy's sharply critical review of Computer Power and Human Reason, and Weizenbaum's point-by-point letter in response.", "significance": "The two principals of the 1970s AI ethics fight addressing each other directly in print - McCarthy charging moralism, Weizenbaum answering that his book attacks the dogmatic coupling of reason to power.", "author": "John McCarthy and Joseph Weizenbaum", "arg": "B", "sub": "D", "citation": "ACM SIGART Newsletter No. 58 (June 1976); reprinted with other reviews in Stanford AI Lab Memo AIM-291 (DTIC ADA044713)", "note": "", "era": "Dissent: From the Philosophers to Star Wars", "stance": "", "quote": "", "num": 22}, {"seq": "7", "date": "November 8, 1984", "type": "Diary", "title": "McCorduck's Journal: A Banquet in Tokyo", "content": "A dated journal entry describing the banquet of Japan's Fifth Generation conference in Tokyo, attended with Edward Feigenbaum.", "significance": "A same-night private record from inside the peak of the Fifth Generation boom, by the co-author of the 1983 book that stoked the West's funding alarm.", "author": "Pamela McCorduck", "arg": "C", "sub": "A", "citation": "Pamela McCorduck's journals, Carnegie Mellon University Archives, Hunt Library (currently closed to researchers); entry in This Could Be Important (ETC Press, 2019)", "note": "", "era": "Patrons and Winters", "stance": "Builder", "quote": "\"An elegant French-style banquet, and I'm asked to say a few words. I talk about the momentous occasion not only for Japan, but for the human race.\"", "num": 30}, {"seq": "7", "date": "March 1, 1995", "type": "Speech", "title": "To Dream the Possible Dream", "content": "Reddy's ACM Turing Award lecture surveying artificial intelligence's achievements and prospects.", "significance": "The 1994 Turing Award to Reddy and Feigenbaum was explicitly for building large-scale AI systems - the field's highest honor conceding that applied systems, not just theories, mattered.", "author": "Raj Reddy", "arg": "D", "sub": "B", "citation": "Communications of the ACM 39(5):105-112 (May 1996), DOI 10.1145/229459.233436; ACM Turing Award archive", "note": "", "era": "From Lab to World", "stance": "Builder", "quote": "", "num": 38}, {"seq": "8", "date": "November 29, 1946", "type": "Letter", "title": "Von Neumann Writes Wiener on Brains and Automata", "content": "A seven-page letter from the Institute for Advanced Study to Norbert Wiener at MIT on automata and the nervous system, ahead of a meeting of their research circle.", "significance": "Two central figures of the founding circle privately weighing where machine-brain research should go, including von Neumann's doubts about the McCulloch-Pitts route and his case for studying self-reproducing systems first.", "author": "John von Neumann", "arg": "A", "sub": "B", "citation": "Norbert Wiener papers, MC-0022, MIT Libraries Distinctive Collections; copy catalogued in the Heinz von Foerster Archive, University of Vienna; published in Redei, ed., John von Neumann: Selected Letters (2005)", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "Builder", "quote": "\"After the great positive contribution of Turing-cum-Pitts-and-McCulloch is assimilated, the situation is rather worse than better than before.\"", "num": 3}, {"seq": "8", "date": "January 11, 1986", "type": "Diary", "title": "McCorduck's Journal: Answering Ashley Montagu", "content": "A dated journal entry written after McCorduck served as panel respondent to the anthropologist Ashley Montagu's address on the impact of the computer, at Santa Clara University.", "significance": "A first-person, same-week record of a public humanist-versus-AI confrontation, capturing how a celebrity humanist's case against the computer played to an adoring crowd of seven hundred.", "author": "Pamela McCorduck", "arg": "B", "sub": "C", "citation": "Pamela McCorduck's journals, Carnegie Mellon University Archives, Hunt Library; entry and the event's photograph in This Could Be Important (ETC Press, 2019)", "note": "", "era": "Dissent: From the Philosophers to Star Wars", "stance": "", "quote": "", "num": 33}, {"seq": "8", "date": "1984", "type": "Speech", "title": "The Dark Ages of AI", "content": "The published record of a panel at the 1984 national AI conference in Austin on whether inflated expectations could collapse the field's support.", "significance": "The moment the field named its own fear - \"AI winter,\" borrowed from nuclear winter - on its own stage, four years before the funding actually fell.", "author": "Drew McDermott, Roger Schank, and panel", "arg": "C", "sub": "D", "citation": "AI Magazine 6(3):122-134 (Fall 1985), AAAI; panel held at AAAI-84, Austin, Texas", "note": "", "era": "Patrons and Winters", "stance": "Critic", "quote": "", "num": 29}, {"seq": "8", "date": "1977", "type": "Report", "title": "Speech Understanding Systems", "content": "CMU's summary report on the five-year DARPA speech-understanding effort, reporting the Harpy system's recognition of thousand-word-vocabulary connected speech.", "significance": "Harpy was the only system to meet ARPA's 1971 goals at the 1976 demonstrations, proving continuous speech recognition feasible - the direct ancestor of commercial speech recognition.", "author": "Carnegie-Mellon University Computer Science Department", "arg": "D", "sub": "A", "citation": "Carnegie-Mellon University Computer Science Department, 1977; DTIC AD-A049288; condensed in IEEE Transactions on Professional Communication PC-20(4)", "note": "", "era": "From Lab to World", "stance": "Builder", "quote": "", "num": 23}, {"seq": "9", "date": "1943-1960 volumes (kept 1928-1972)", "type": "Diary", "title": "Ashby's Journal", "content": "A continuously dated private working notebook of some 7,400 pages recording Ashby's ideas on brains and machines across 44 years.", "significance": "Entry by dated entry, the journal shows a member of the Turing-Wiener circle working out the homeostat and his design for a brain, and records the small transatlantic group that shaped early machine intelligence.", "author": "W. Ross Ashby", "arg": "A", "sub": "C", "citation": "British Library, Add MS 89153/1-25 (Papers of William Ross Ashby); complete page images in the W. Ross Ashby Digital Archive (ashby.info)", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "Builder", "quote": "\"Today I can say I have solved the problem I set out to solve on 7 May '28. I asked, roughly, whence come the patterning properties of the nervous system. The answer is now clear.\" (entry of June 13, 1959)", "num": 1}, {"seq": "9", "date": "November 14, 1984", "type": "Speech", "title": "Beer Cans and Meat Machines", "content": "The second of Searle's six BBC Reith Lectures, arguing that running the right program, even on a contraption of beer cans and windmills, cannot by itself produce a mind.", "significance": "The Chinese Room argument delivered to a national broadcast audience rather than a scholarly one - the moment academic AI criticism became mass-audience public philosophy.", "author": "John Searle", "arg": "B", "sub": "D", "citation": "BBC Radio 4, The Reith Lectures 1984, Lecture 2; transcript in the BBC Reith archive; published as Minds, Brains and Science (BBC, 1984)", "note": "", "era": "Dissent: From the Philosophers to Star Wars", "stance": "Critic", "quote": "", "num": 31}, {"seq": "9", "date": "October 28, 1983", "type": "Report", "title": "Strategic Computing", "content": "DARPA's ten-year plan proposing a major program to develop machine-intelligence technology and apply it to critical defense problems.", "significance": "The American answer to Japan: roughly a billion dollars of new defense money that funded the expert-systems boom - and whose redirection after 1987 helped precipitate the AI winter.", "author": "Defense Advanced Research Projects Agency", "arg": "C", "sub": "A", "citation": "DARPA, Washington DC, October 28, 1983; Defense Technical Information Center, accession ADA141982", "note": "Image: US government report, public domain; full text at DTIC.", "era": "Patrons and Winters", "stance": "Builder", "quote": "", "num": 27}, {"seq": "9", "date": "May 11, 1997", "type": "Photograph", "title": "The Deep Blue Team, Match Night", "content": "A photograph of the IBM Deep Blue development team taken after the final game of the 1997 rematch in New York.", "significance": "The people behind the machine, hours after a computer first beat a reigning world champion under tournament conditions - corporate R&D delivering AI's most famous public victory.", "author": "Unrecorded photographer (from Feng-hsiung Hsu)", "arg": "D", "sub": "B", "citation": "Computer History Museum, catalog 102645318, accession X3306.2006, gift of Feng-hsiung Hsu", "note": "", "era": "From Lab to World", "stance": "Builder", "quote": "", "num": 39}, {"seq": "10", "date": "February 20, 1947", "type": "Speech", "title": "Turing's Lecture to the London Mathematical Society", "content": "The typescript of a public lecture on the Automatic Computing Engine and the prospect of machines that learn from experience.", "significance": "The first public lecture on computer intelligence: Turing told a mathematical audience that a machine should be allowed to make mistakes and to learn like a pupil, two years before any British stored-program computer ran.", "author": "Alan M. Turing", "arg": "A", "sub": "D", "citation": "Xerox of Turing's typescript with additions, item AMT/B/1, Turing Papers, King's College Archive Centre, Cambridge; first published 1986 (Carpenter and Doran, eds., MIT Press)", "note": "", "era": "The Founding Generation, 1943-1960", "stance": "Builder", "quote": "\"What we want is a machine that can learn from experience.\"", "num": 4}, {"seq": "10", "date": "1980", "type": "Report", "title": "Minds, Brains, and Programs", "content": "A target article in a peer-commentary journal presenting an argument that an appropriately programmed computer does not thereby have cognitive states.", "significance": "The most-debated attack on strong AI ever published; the journal's open-commentary format means the document carries 27 rebuttals from the builders and Searle's reply inside itself - a complete debate in one artifact.", "author": "John R. Searle", "arg": "B", "sub": "A", "citation": "Behavioral and Brain Sciences 3(3):417-457 (1980), Cambridge University Press; DOI 10.1017/S0140525X00005756", "note": "", "era": "Dissent: From the Philosophers to Star Wars", "stance": "Critic", "quote": "\"no program by itself is sufficient for thinking\"", "num": 26}, {"seq": "10", "date": "by 1992", "type": "Photograph", "title": "The Parallel Inference Machines", "content": "Photographs of the PIM/p and PIM/m parallel inference machines, the final hardware of Japan's Fifth Generation project.", "significance": "What eleven years and 54 billion yen of ministry patronage physically bought: prototype machines that were museum pieces, not market products, by the project's close.", "author": "ICOT (photographs via the IPSJ Computer Museum)", "arg": "C", "sub": "B", "citation": "IPSJ Computer Museum online catalogue; the machines are preserved at the National Museum of Nature and Science, Tokyo", "note": "", "era": "Patrons and Winters", "stance": "", "quote": "", "num": 36}, {"seq": "10", "date": "March 1977", "type": "Map", "title": "ARPANET Logical Map, March 1977", "content": "A network map locating every host and IMP on the ARPANET as of March 1977 - 111 host computers from MIT and Stanford to the Pentagon.", "significance": "Nearly every AI laboratory sits on this map as a node: the network that carried AI's code, data, and people out of individual labs into a national infrastructure.", "author": "Bolt Beranek and Newman Inc.", "arg": "D", "sub": "C", "citation": "ARPANET Completion Report (Bolt Beranek and Newman, January 4, 1978), map plate; related BBN/ARPANET materials in the Computer History Museum", "note": "", "era": "From Lab to World", "stance": "Builder", "quote": "\"ARPANET LOGICAL MAP, MARCH 1977\" (printed on the map)", "num": 24}]};
+
+/* ============ TUNABLE NUMBERS: change these to rebalance ============ */
+const CONFIG = {
+  handSize: 5,
+  paperPts: 2,            // conference paper (the card returns to your discard pile)
+  articlePts: 4,          // article
+  bookCardPts: {3:5, 4:8, 5:13, 6:19, 7:26, 8:34}, // book value by number of cards: each extra card is worth more
+  bookBonus: 4,           // flat bonus per book
+  citePts: 2,             // paid to a rival each time you cite a card on their bookshelf
+  bookMin: 4,             // cards in a book
+  bookMinFromHand: 2,     // of which at least this many must come from hand
+  rounds: {short:6, medium:10, long:14},   // the game ends after this many rounds
+  upgradeCopies: 2,       // copies of each upgrade in the conference space
+  // book sets: each is a flat bonus, and one book can score both
+  runMin: 3, runPts: 12,    // Sequence: this many cards with consecutive chronological numbers
+  typesMin: 5, typesPts: 12, // Range of Sources: this many different source types
+  startCards: 5,          // cards each player takes from their chosen argument stack at setup
+  trashPerStack: 3,       // trash cards shuffled into each argument stack
+  trashPenalty: 1,        // prestige lost per trash card still in your deck at the end
+  keepCards: 1            // cards you may keep in hand at the end of your turn
+};
+const ACTIONS = {
+  conference:{name:"Attend Conference",kind:"conference",value:0,text:"Choose one source in hand and present it as a conference paper. The card goes to your discard pile."},
+  article:{name:"Publish an Article",kind:"article",value:0,text:"Choose two sources in hand from the same era. Showcase one on your bookshelf."},
+  book:{name:"Publish a Book",kind:"book",value:0,text:"Choose four or more cards on one thesis: from hand, your bookshelf, or rivals' bookshelves (a citation)."},
+  research:{name:"Research",kind:"research",value:0,text:"Discard n cards from hand. Add n cards from one argument stack to your discard pile."},
+  network:{name:"Network",kind:"network",value:0,text:"Discard n cards from hand. Take an upgrade worth n or less; it replaces a card in your discard pile."},
+  organize:{name:"Organize",kind:"organize",value:0,text:"Remove any number of trash cards from your hand or discard pile. They leave the game."},
+  sabbatical:{name:"Sabbatical",kind:"draw",value:1,draw:2,text:"Draw 2 cards."},
+  keynote:{name:"Keynote Address",kind:"conference",value:2,pts:6,text:"Conference paper worth 6 instead of 2."},
+  travel:{name:"Travel Grant",kind:"research",value:2,look:2,text:"Research: look at 2 more cards than you take, then put 2 back under the stack."},
+  society:{name:"Society Membership",kind:"network",value:2,bonus:1,text:"Network: your discards count as n+1."},
+  agent:{name:"Literary Agent",kind:"article",value:3,pts:5,text:"Article worth 5 more prestige."},
+  assistant:{name:"Research Assistant",kind:"research",value:3,toHand:true,look:1,text:"Research: look at 1 more card than you take and put 1 back. The cards you keep go straight to your hand."},
+  fellowship:{name:"Fellowship",kind:"draw",value:3,draw:3,text:"Draw 3 cards."},
+  press:{name:"University Press",kind:"book",value:4,pts:4,min:3,text:"Book needs only 3 cards and is worth 4 more prestige."}
+};
+const BASE = ["conference","article","book","research","network","organize"];
+const TRASH = [
+  {name:"Misfiled Folder",text:"The box label promised something else entirely."},
+  {name:"Illegible Microfilm",text:"Three hours at the reader and not one usable line."},
+  {name:"Unsourced Anecdote",text:"Everyone repeats it. Nobody can say where it came from."},
+  {name:"Duplicate Copy",text:"You already have this document. Twice."},
+  {name:"Redacted Memo",text:"The date survives. Nothing else does."},
+  {name:"Later Recollection",text:"Written forty years on, and it contradicts the record."}
+];
+const UPGRADES = Object.keys(ACTIONS).filter(k=>ACTIONS[k].value>0);
+const LETTERS = ["A","B","C","D"];
+/* Passive bonus printed on every source card, set by its source type. A card counts while it is in your
+   hand and for as long as it sits on your bookshelf. Bonuses from several cards add up. */
+const BONUS = {
+  Map:       {name:"Finding Aid",   amt:1, text:"Research: look at 1 more card than you take, then put 1 back."},
+  Letter:    {name:"Correspondence",amt:2, text:"Network: your discards count as 2 more."},
+  Speech:    {name:"Platform",      amt:1, text:"Conference papers: +1 prestige."},
+  Report:    {name:"Findings",      amt:1, text:"Articles: +1 prestige."},
+  Photograph:{name:"Illustration",  amt:2, text:"Books: +2 prestige."},
+  Newspaper: {name:"Publicity",     amt:2, text:"When a rival cites you: +2 prestige."},
+  Diary:     {name:"Notebook",      amt:1, text:"End of turn: keep 1 more card."}
+};
+
+/* ============================ GAME LOGIC ============================ */
+let S = null; const REG = {};
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(S.rand()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function mk(kind,ref){const c={uid:++S.uidc,kind,ref};REG[c.uid]=c;return c}
+const def=c=>ACTIONS[c.ref], src=c=>DATA.cards[c.ref];
+const tagsOf=c=>{const d=src(c);return d.sub?[d.arg,d.sub]:[d.arg]};
+const nameOf=c=>c.kind==="source"?"“"+src(c).title+"”":c.kind==="trash"?TRASH[c.ref].name+" (trash)":def(c).name;
+const trashCount=p=>[...p.deck,...p.hand,...p.discard,...p.play].filter(c=>c.kind==="trash").length;
+function B(p,type){return BONUS[type].amt*(p.hand.filter(c=>c.kind==="source"&&src(c).type===type).length+p.shelf.filter(e=>src(e.card).type===type).length)}
+const keepLimit=p=>CONFIG.keepCards?CONFIG.keepCards+B(p,"Diary"):0;
+function log(t){S.log.push({r:S.round,t})}
+function cur(){return S.players[S.turn]}
+
+function newGame(seats,length,seed){
+  S={uidc:0,rand:mulberry(seed||Date.now()),players:[],stacks:{},market:{},turn:0,round:1,log:[],over:false,phase:"draft",draftAt:0,trashSeq:0,endTriggered:false,length,ti:{}};
+  for(const L of LETTERS){S.stacks[L]=shuffle(DATA.cards.map((d,i)=>d.arg===L?i:-1).filter(i=>i>=0)).map(i=>mk("source",i));for(let k=0;k<CONFIG.trashPerStack;k++)S.stacks[L].push(mk("trash",S.trashSeq++%TRASH.length));shuffle(S.stacks[L]);S.ti[L]={a:0,b:0}}
+  for(const u of UPGRADES)S.market[u]=CONFIG.upgradeCopies;
+  seats.forEach((s,i)=>{const p={i,name:s.name,bot:s.bot,deck:[],hand:[],discard:[],play:[],shelf:[],cv:[],prestige:0,cites:0};
+    p.deck=BASE.map(b=>mk("action",b));S.players.push(p)});
+  log("The game begins. It lasts "+CONFIG.rounds[length]+" rounds.");
+}
+function doDraft(L){const p=S.players[S.draftAt];if(S.phase!=="draft"||!p)return "Not drafting.";
+  if(!S.stacks[L]||S.stacks[L].length<CONFIG.startCards)return "Not enough cards left in that stack.";
+  const got=S.stacks[L].splice(0,CONFIG.startCards);p.deck.push(...got);shuffle(p.deck);p.field=L;S.draftAt++;
+  log(p.name+" begins in field "+L+" and takes "+got.length+" cards from that stack.");
+  if(S.draftAt>=S.players.length){S.phase="play";for(const q of S.players)draw(q,CONFIG.handSize)}
+  return {got}}
+function botDraft(){const Ls=LETTERS.slice().sort((x,y)=>(S.stacks[y].length-S.stacks[x].length)||(S.rand()-.5));return doDraft(Ls[0])}
+function draw(p,n){let k=0;for(let i=0;i<n;i++){if(!p.deck.length){if(!p.discard.length)break;p.deck=shuffle(p.discard);p.discard=[]}p.hand.push(p.deck.pop());k++}return k}
+function take(arr,uid){const i=arr.findIndex(c=>c.uid===uid);return i<0?null:arr.splice(i,1)[0]}
+function inHand(p,uid){return p.hand.find(c=>c.uid===uid)}
+function books(p){return p.cv.filter(x=>x.type==="book").length}
+function allSources(p){return [...p.deck,...p.hand,...p.discard].filter(c=>c.kind==="source")}
+function findShelf(uid){for(const q of S.players)for(const e of q.shelf)if(e.card.uid===uid)return {e,owner:q};return null}
+
+function actCheck(p,aUid,kind){const a=inHand(p,aUid);if(!a||a.kind!=="action"||def(a).kind!==kind)return null;return a}
+function playCard(p,a){take(p.hand,a.uid);p.play.push(a)}
+
+function doDraw(p,aUid){const a=actCheck(p,aUid,"draw");if(!a)return "Not a draw card.";playCard(p,a);const k=draw(p,def(a).draw);log(p.name+" plays "+def(a).name+" and draws "+k+".");return null}
+
+function doOrganize(p,aUid,uids){const a=actCheck(p,aUid,"organize");if(!a)return "Not an organize card.";
+  if(!uids.length)return "Choose at least one trash card.";
+  const find=u=>p.hand.find(c=>c.uid===u)||p.discard.find(c=>c.uid===u);
+  if(uids.some(u=>{const c=find(u);return !c||c.kind!=="trash"}))return "Only trash cards in your hand or discard pile.";
+  playCard(p,a);for(const u of uids){take(p.hand,u)||take(p.discard,u)}
+  log(p.name+" organizes and throws out "+uids.length+" trash card"+(uids.length===1?"":"s")+".");return null}
+
+function doResearch(p,aUid,disc,L,chooser){const a=actCheck(p,aUid,"research");if(!a)return "Not a research card.";
+  if(!disc.length)return "Discard at least one card.";if(disc.includes(aUid)||disc.some(u=>!inHand(p,u)))return "Bad discard.";
+  if(!S.stacks[L]||!S.stacks[L].length)return "That stack is empty.";
+  const d=def(a),look=B(p,"Map")+(d.look||0);playCard(p,a);for(const u of disc)p.discard.push(take(p.hand,u));
+  const want=disc.length+(d.bonus||0),seen=S.stacks[L].splice(0,Math.min(want+look,S.stacks[L].length));
+  const pend={p,seen,keepN:Math.min(want,seen.length),toHand:!!d.toHand,L,n:disc.length};
+  if(seen.length<=pend.keepN)return finishResearch(pend,[]);
+  if(chooser)return finishResearch(pend,chooser(p,seen,seen.length-pend.keepN));
+  S.pending=pend;return {pending:true,seen,reject:seen.length-pend.keepN,keepN:pend.keepN}}
+function finishResearch(pend,rej){const p=pend.p,k=pend.seen.length-pend.keepN;
+  if(rej.length!==k||new Set(rej).size!==k||rej.some(u=>!pend.seen.find(c=>c.uid===u)))return "Put back exactly "+k+".";
+  const got=pend.seen.filter(c=>!rej.includes(c.uid)),back=pend.seen.filter(c=>rej.includes(c.uid));
+  S.stacks[pend.L].push(...back);(pend.toHand?p.hand:p.discard).push(...got);S.pending=null;
+  log(p.name+" researches: discards "+pend.n+", "+(back.length?"looks at "+pend.seen.length+" and ":"")+"takes "+got.length+" from stack "+pend.L+(pend.toHand?" into hand":"")+".");
+  return {got}}
+
+function doConference(p,aUid,sUid){const a=actCheck(p,aUid,"conference");if(!a)return "Not a conference card.";
+  const s=inHand(p,sUid);if(!s||s.kind!=="source")return "Choose one source.";
+  const pts=(def(a).pts||CONFIG.paperPts)+B(p,"Speech");playCard(p,a);p.discard.push(take(p.hand,sUid));p.prestige+=pts;
+  p.cv.push({type:"paper",title:src(s).title,letter:src(s).arg,pts});
+  log(p.name+" presents a conference paper on “"+src(s).title+"” (+"+pts+").");return null}
+
+function sameEra(a,b){return src(a).era===src(b).era}
+function doArticle(p,aUid,s1,s2,show){const a=actCheck(p,aUid,"article");if(!a)return "Not an article card.";
+  const c1=inHand(p,s1),c2=inHand(p,s2);if(!c1||!c2||s1===s2||c1.kind!=="source"||c2.kind!=="source")return "Choose two sources.";
+  if(!sameEra(c1,c2))return "The two sources must share an era.";if(show!==s1&&show!==s2)return "Choose which card to showcase.";
+  const pts=CONFIG.articlePts+(def(a).pts||0)+B(p,"Report");
+  playCard(p,a);take(p.hand,s1);take(p.hand,s2);const sc=show===s1?c1:c2,L=src(sc).arg;
+  p.shelf.push({card:sc,usedBy:[]});p.discard.push(show===s1?c2:c1);p.prestige+=pts;
+  const tl=DATA.theses[L].articles,title=tl[S.ti[L].a++%tl.length];
+  p.cv.push({type:"article",title,letter:L,pts});
+  log(p.name+" publishes the article “"+title+"” (+"+pts+"), showcasing “"+src(sc).title+"”.");return null}
+
+function bookSets(all){const out=[],nums=[...new Set(all.map(c=>src(c).num))].sort((a,b)=>a-b);
+  let best=[],run=[];for(const n of nums){if(run.length&&n===run[run.length-1]+1)run.push(n);else run=[n];if(run.length>best.length)best=run.slice()}
+  if(best.length>=CONFIG.runMin)out.push({name:"Sequence",pts:CONFIG.runPts,why:"Nos. "+best[0]+"\u2013"+best[best.length-1]});
+  const types=new Set(all.map(c=>src(c).type));if(types.size>=CONFIG.typesMin)out.push({name:"Range of Sources",pts:CONFIG.typesPts,why:types.size+" source types"});
+  return out}
+function bookCardPts(n){const t=CONFIG.bookCardPts,mx=Math.max(...Object.keys(t).map(Number));return n<=mx?(t[n]||0):t[mx]+(n-mx)*(t[mx]-t[mx-1]+1)}
+function bookCheck(p,d,handCards,shelfUids){
+  const min=d.min||CONFIG.bookMin,ents=[];
+  for(const u of shelfUids){const f=findShelf(u);if(!f)return {ok:false,msg:"Bad shelf card."};if(f.e.usedBy.includes(p.i))return {ok:false,msg:"You have already used “"+src(f.e.card).title+"” in a book."};ents.push(f)}
+  const all=[...handCards,...ents.map(f=>f.e.card)],n=all.length;
+  if(handCards.some(c=>c.kind!=="source"))return {ok:false,msg:"Sources only."};
+  if(n<min)return {ok:false,msg:n+" of "+min+" cards chosen."};
+  if(handCards.length<Math.min(CONFIG.bookMinFromHand,min))return {ok:false,msg:"At least "+CONFIG.bookMinFromHand+" cards must come from your hand."};
+  const ok=LETTERS.filter(L=>all.every(c=>tagsOf(c).includes(L)));
+  if(!ok.length)return {ok:false,msg:"The cards do not share a thesis letter."};
+  ok.sort((x,y)=>all.filter(c=>src(c).arg===y).length-all.filter(c=>src(c).arg===x).length);
+  const sets=bookSets(all),base=bookCardPts(n)+CONFIG.bookBonus+(d.pts||0)+B(p,"Photograph"),pts=base+sets.reduce((t,x)=>t+x.pts,0);
+  const sx=sets.length?" Sets: "+sets.map(x=>x.name+" ("+x.why+") +"+x.pts).join(", ")+".":" No sets yet.";
+  return {ok:true,letter:ok[0],pts,sets,ents,n,msg:n+" cards on thesis "+ok[0]+": "+base+" base"+(sets.length?" + "+(pts-base)+" in sets":"")+" = "+pts+" prestige."+sx}}
+function doBook(p,aUid,handUids,shelfUids,showUid){const a=actCheck(p,aUid,"book");if(!a)return "Not a book card.";
+  if(showUid&&!handUids.includes(showUid))return "The showcased card must be one of the cards from your hand.";
+  const hc=handUids.map(u=>inHand(p,u));if(hc.some(c=>!c))return "Bad hand card.";
+  const r=bookCheck(p,def(a),hc,shelfUids);if(!r.ok)return r.msg;
+  playCard(p,a);for(const u of handUids){const c=take(p.hand,u);if(u===showUid)p.shelf.push({card:c,usedBy:[p.i]});else S.stacks[src(c).arg].push(c)}
+  const cited=[];for(const f of r.ents){f.e.usedBy.push(p.i);if(f.owner!==p){f.owner.prestige+=CONFIG.citePts+B(f.owner,"Newspaper");f.owner.cites++;cited.push(f.owner.name)}}
+  p.prestige+=r.pts;const tl=DATA.theses[r.letter].books,title=tl[S.ti[r.letter].b++%tl.length];
+  p.cv.push({type:"book",title,letter:r.letter,pts:r.pts,n:r.n});
+  log(p.name+" publishes the BOOK “"+title+"”: "+r.n+" cards on thesis "+r.letter+" (+"+r.pts+")"+(r.sets.length?", with "+r.sets.map(x=>x.name).join(" and "):"")+(showUid?", showcasing "+nameOf(REG[showUid]):"")+(cited.length?", citing "+[...new Set(cited)].join(" and ")+" (+"+CONFIG.citePts+" per card cited)":"")+".");
+  return null}
+
+function doNetwork(p,aUid,disc,upId,replUid){const a=actCheck(p,aUid,"network");if(!a)return "Not a network card.";
+  const up=ACTIONS[upId];if(!up||!S.market[upId])return "That upgrade is gone.";
+  if(!disc.length)return "Discard at least one card.";if(disc.includes(aUid)||disc.some(u=>!inHand(p,u)))return "Bad discard.";
+  if(disc.length+(def(a).bonus||0)+B(p,"Letter")<up.value)return "You need to discard more cards for that upgrade.";
+  if(!disc.includes(replUid)&&!p.discard.find(c=>c.uid===replUid))return "Choose a card in your discard pile to replace.";
+  playCard(p,a);for(const u of disc)p.discard.push(take(p.hand,u));
+  const out=take(p.discard,replUid);if(out.kind==="source")S.stacks[src(out).arg].push(out);
+  p.discard.push(mk("action",upId));S.market[upId]--;
+  log(p.name+" networks: discards "+disc.length+" and takes "+up.name+", replacing "+nameOf(out)+(out.kind==="source"?" (back to stack "+src(out).arg+")":"")+".");return null}
+
+function endTurn(keepUids){const p=cur(),lim=keepLimit(p),keep=[];
+  for(const u of [].concat(keepUids||[]).slice(0,lim)){const c=take(p.hand,u);if(c)keep.push(c)}
+  p.discard.push(...p.hand,...p.play);const kn=keep.length;p.hand=keep;p.play=[];draw(p,Math.max(0,CONFIG.handSize-kn));
+  log(p.name+" ends the turn"+(kn?", keeping "+kn+" card"+(kn===1?"":"s")+" in hand":"")+".");
+  S.turn=(S.turn+1)%S.players.length;
+  if(S.turn===0){
+    if(S.round>=CONFIG.rounds[S.length]){S.over=true;for(const q of S.players){const t=trashCount(q);q.trash=t;if(t&&CONFIG.trashPenalty){q.prestige-=t*CONFIG.trashPenalty;log(q.name+" loses "+t*CONFIG.trashPenalty+" prestige for "+t+" trash card"+(t===1?"":"s")+" left in the deck.")}}log("The game is over.");return}
+    S.round++}}
+
+/* ------------------------------ bots ------------------------------ */
+function botReject(p,seen,k){const own=allSources(p),val=c=>c.kind!=="source"?-1:own.filter(x=>src(x).arg===src(c).arg).length+p.shelf.filter(e=>tagsOf(e.card).includes(src(c).arg)).length+(tagsOf(c).includes(p.field)?1:0);
+  return seen.slice().sort((x,y)=>val(x)-val(y)).slice(0,k).map(c=>c.uid)}
+function botBook(p,a){let best=null;const d=def(a),min=d.min||CONFIG.bookMin;
+  for(const L of LETTERS){const hs=p.hand.filter(c=>c.kind==="source"&&tagsOf(c).includes(L));
+    if(hs.length<Math.min(CONFIG.bookMinFromHand,min))continue;
+    const own=[],riv=[];for(const q of S.players)for(const e of q.shelf)if(tagsOf(e.card).includes(L)&&!e.usedBy.includes(p.i))(q===p?own:riv).push(e.card.uid);
+    for(let k=0;k<=riv.length;k++){const sh=own.concat(riv.slice(0,k));if(hs.length+sh.length<min)continue;
+      const r=bookCheck(p,d,hs,sh);if(!r.ok)continue;const val=r.pts-k*CONFIG.citePts;
+      if(!best||val>best.val)best={val,n:r.n,h:hs.map(c=>c.uid),sh,show:hs[0].uid}}}
+  return best}
+function botStep(){const p=cur(),H=k=>p.hand.find(c=>c.kind==="action"&&def(c).kind===k),srcs=()=>p.hand.filter(c=>c.kind==="source");
+  let a;
+  if((a=H("organize"))){const t=[...p.hand,...p.discard].filter(c=>c.kind==="trash");if(t.length&&doOrganize(p,a.uid,t.map(c=>c.uid))===null)return true}
+  if((a=H("draw"))){doDraw(p,a.uid);return true}
+  if((a=H("book"))){const b=botBook(p,a);if(b&&doBook(p,a.uid,b.h,b.sh,b.show)===null)return true}
+  if((a=H("article"))){const s=srcs();for(let i=0;i<s.length;i++)for(let j=i+1;j<s.length;j++)if(sameEra(s[i],s[j])){const show=src(s[i]).sub?s[i]:s[j];if(doArticle(p,a.uid,s[i].uid,s[j].uid,show.uid)===null)return true}}
+  const owned=allSources(p).length;
+  if((a=H("network"))&&owned>=4){const others=p.hand.filter(c=>c!==a),bonus=(def(a).bonus||0)+B(p,"Letter");
+    const have=k=>[...p.deck,...p.hand,...p.discard,...p.play].some(c=>c.kind==="action"&&c.ref===k);
+    const opts=UPGRADES.filter(u=>S.market[u]&&!have(u)&&ACTIONS[u].value<=others.length+bonus).sort((x,y)=>ACTIONS[y].value-ACTIONS[x].value);
+    for(const u of opts){const k=ACTIONS[u].kind,need=Math.max(1,ACTIONS[u].value-bonus);
+      let tgt=[...others,...p.discard].find(c=>c.kind==="action"&&c.ref===k);            // replace the basic version
+      if(!tgt&&k==="draw")tgt=[...others,...p.discard].find(c=>c.kind==="trash")||others.find(c=>c.kind==="source")||p.discard.find(c=>c.kind==="source");
+      if(!tgt)continue;
+      const pool=others.filter(c=>c!==tgt).sort((x,y)=>(x.kind==="source")-(y.kind==="source")||(y.kind==="trash")-(x.kind==="trash"));
+      const disc=others.includes(tgt)?[tgt]:[];while(disc.length<need&&pool.length)disc.push(pool.shift());
+      if(disc.length<need)continue;
+      if(doNetwork(p,a.uid,disc.map(c=>c.uid),u,tgt.uid)===null)return true}}
+  if((a=H("conference"))){const s=srcs();if(s.length){const cnt=c=>allSources(p).filter(x=>src(x).era===src(c).era).length;s.sort((x,y)=>cnt(x)-cnt(y));if(doConference(p,a.uid,s[0].uid)===null)return true}}
+  if((a=H("research"))&&owned<10){const others=p.hand.filter(c=>c!==a);if(others.length){
+    const cnt={};for(const L of LETTERS)cnt[L]=0;for(const c of allSources(p))cnt[src(c).arg]+=2;for(const e of p.shelf)cnt[src(e.card).arg]+=3;
+    const Ls=LETTERS.filter(L=>S.stacks[L].length).sort((x,y)=>(cnt[y]-cnt[x])||(S.stacks[y].length-S.stacks[x].length)||(S.rand()-.5));
+    if(Ls.length&&typeof doResearch(p,a.uid,others.map(c=>c.uid),Ls[0],botReject)==="object")return true}}
+  return false}
+
+function botKeep(){const p=cur(),lim=keepLimit(p),own=allSources(p),out=[];
+  const cnt=c=>own.filter(x=>src(x).arg===src(c).arg).length+p.shelf.filter(e=>tagsOf(e.card).includes(src(c).arg)).length;
+  const bk=p.hand.find(c=>c.kind==="action"&&def(c).kind==="book");if(bk&&own.length+p.shelf.length>=4)out.push(bk.uid);
+  for(const c of p.hand.filter(c=>c.kind==="source").sort((x,y)=>cnt(y)-cnt(x)))out.push(c.uid);
+  const ar=p.hand.find(c=>c.kind==="action"&&def(c).kind==="article");if(ar)out.push(ar.uid);
+  return out.slice(0,lim)}
+function ranking(){return S.players.slice().sort((a,b)=>b.prestige-a.prestige||books(b)-books(a))}
+
+/* =============================== UI =============================== */
+if(typeof document!=="undefined"){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+let UI={mode:null,a:null,sel:[],shelf:[],step:0,up:null},VIEW=0,busy=false;
+const me=()=>S.players[VIEW];
+const myTurn=()=>!S.over&&S.turn===VIEW&&!cur().bot&&!busy;
+function resetUI(){UI={mode:null,a:null,sel:[],shelf:[],step:0,up:null}}
+
+function tagsHTML(d){return '<span class="tg" style="background:var(--'+d.arg+')">'+d.arg+'</span>'+(d.sub?'<span class="tg s" style="color:var(--'+d.sub+');border-color:var(--'+d.sub+')">'+d.sub+'</span>':'')}
+function srcHTML(c,o){o=o||{};const d=src(c);
+  return '<div class="card '+(o.cls||"")+'" '+(o.attr||"")+'><div class="hd mono"><span>'+esc(d.type)+'</span><span>'+esc(d.date)+'</span></div><div class="bd">'+
+    '<div class="ti">'+esc(d.title)+'</div>'+(o.mini?"":'<div class="au">'+esc(d.author)+'</div>')+
+    '<div class="era mono">'+esc(d.era)+(d.stance?" · "+esc(d.stance):"")+'</div>'+
+    '<div class="bonus"><b>'+esc(BONUS[d.type].name)+'.</b> '+esc(BONUS[d.type].text)+'</div>'+
+    '<div class="tags"><span class="num" title="Chronological number">'+d.num+'</span>'+tagsHTML(d)+'<button class="read" data-read="'+c.uid+'">Read</button></div>'+(o.foot||"")+'</div></div>'}
+function bonusSum(p,shelfOnly){const out=[];for(const t in BONUS){const n=p.shelf.filter(e=>src(e.card).type===t).length,h=shelfOnly?0:p.hand.filter(c=>c.kind==="source"&&src(c).type===t).length;
+    if(n+h)out.push('<b>'+esc(BONUS[t].name)+'</b> \u00d7'+(n+h)+(h&&!shelfOnly?' <span class="note">('+n+' shelf, '+h+' hand)</span>':""))}
+  return '<div class="bsum">'+(shelfOnly?"Bookshelf bonuses: ":"Active bonuses: ")+(out.length?out.join(" \u00b7 "):'<span class="note">none</span>')+'</div>'}
+function actHTML(c,o){o=o||{};const d=def(c);
+  return '<div class="card act '+(o.cls||"")+'" '+(o.attr||"")+'><div class="hd mono"><span>Action</span><span>'+(d.value?"Upgrade "+d.value:"Basic")+'</span></div><div class="bd"><div class="nm">'+esc(d.name)+'</div><div class="tx">'+esc(d.text)+'</div></div></div>'}
+function trashHTML(c,o){o=o||{};const d=TRASH[c.ref];
+  return '<div class="card trash '+(o.cls||"")+'" '+(o.attr||"")+'><div class="hd mono"><span>Trash</span><span>'+(CONFIG.trashPenalty?"−"+CONFIG.trashPenalty+" at the end":"")+'</span></div><div class="bd"><div class="nm">'+esc(d.name)+'</div><div class="tx">'+esc(d.text)+'</div></div></div>'}
+function cardHTML(c,o){return c.kind==="source"?srcHTML(c,o):c.kind==="trash"?trashHTML(c,o):actHTML(c,o)}
+function cvHTML(p){const n=t=>p.cv.filter(x=>x.type===t).length;
+  return n("book")+" book"+(n("book")===1?"":"s")+" · "+n("article")+" article"+(n("article")===1?"":"s")+" · "+n("paper")+" conference paper"+(n("paper")===1?"":"s")+" · cited "+p.cites+" time"+(p.cites===1?"":"s")}
+function shelfHTML(p){if(!p.shelf.length)return '<div class="note">Bookshelf empty.</div>';
+  return '<div class="row">'+p.shelf.map(e=>{const used=e.usedBy.includes(VIEW),on=UI.shelf.includes(e.card.uid),can=UI.mode==="book"&&!used;
+    return srcHTML(e.card,{mini:true,cls:"mini "+(on?"sel ":"")+(can?"click target ":"")+(UI.mode==="book"&&used?"dim":""),attr:can?'data-shelf="'+e.card.uid+'"':"",
+      foot:used?'<div class="used">Already in one of your books</div>':""})}).join("")+'</div>'}
+
+function render(){
+  const p=me();
+  $("score").innerHTML='<span class="chip">Round '+S.round+' of '+CONFIG.rounds[S.length]+'</span>'+S.players.map(q=>'<span class="chip '+(q===cur()&&!S.over?"cur":"")+'">'+esc(q.name)+': <b>'+q.prestige+'</b></span>').join("");
+  $("stacks").innerHTML=LETTERS.map(L=>{const n=S.stacks[L].length,t=UI.mode==="research"&&UI.sel.length&&n;
+    return '<div class="stack '+(n?"":"empty ")+(t?"target":"")+'" style="background:var(--'+L+')" '+(t?'data-stack="'+L+'"':"")+'><div class="L">'+L+'</div><div class="q">'+esc(DATA.theses[L].q)+'</div><div class="mono">'+n+' card'+(n===1?"":"s")+' left</div></div>'}).join("");
+  const nv=UI.mode==="network"?UI.sel.length+(def(REG[UI.a]).bonus||0)+B(p,"Letter"):-1;
+  $("market").innerHTML=UPGRADES.map(u=>{const d=ACTIONS[u],left=S.market[u],t=left&&nv>=d.value;
+    return '<div class="up '+(left?"":"gone ")+(t?"target":"")+'" '+(t?'data-up="'+u+'"':"")+'><div><span class="val">'+d.value+'</span> <span class="nm">'+esc(d.name)+'</span></div><div class="tx">'+esc(d.text)+'</div><div class="mono" style="color:var(--mute);margin-top:auto">'+left+' left</div></div>'}).join("");
+  $("rivals").innerHTML=S.players.filter(q=>q!==p).map(q=>'<div class="pl"><div><span class="nm">'+esc(q.name)+'</span> · '+q.prestige+' prestige <span class="note">· deck '+q.deck.length+', hand '+q.hand.length+', discard '+q.discard.length+'</span></div><div class="cv">'+cvHTML(q)+'</div>'+bonusSum(q,true)+shelfHTML(q)+'</div>').join("");
+  $("meTitle").textContent=p.name+": bookshelf and CV";
+  $("me").innerHTML='<div class="cv">'+p.prestige+' prestige · '+cvHTML(p)+'</div>'+bonusSum(p,false)+shelfHTML(p)+(p.cv.length?'<div class="note" style="margin-top:8px">'+p.cv.map(x=>esc((x.type==="book"?"Book":x.type==="article"?"Article":"Paper")+": "+x.title+" (+"+x.pts+")")).join(" · ")+'</div>':"");
+  const mt=myTurn();
+  $("hand").innerHTML=p.hand.map(c=>{const on=UI.sel.includes(c.uid),isA=c.uid===UI.a;let click=false;
+      if(mt){if(!UI.mode)click=c.kind==="action";else if(UI.mode==="keep")click=true;else if(UI.mode==="organize")click=false;else if(!isA)click=(UI.mode==="research"||UI.mode==="network")?true:c.kind==="source"}
+      const o={cls:(on||isA?"sel ":"")+(click&&UI.mode==="keep"?"target ":"")+(click?"click ":"")+(mt&&UI.mode&&!click&&!isA?"dim":""),attr:click?'data-hand="'+c.uid+'"':""};
+      return cardHTML(c,o)}).join("")+p.play.map(c=>actHTML(c,{cls:"played"})).join("")||'<div class="note">No cards in hand.</div>';
+  $("piles").innerHTML='Deck: '+p.deck.length+' · <a href="#" data-pile="1">Discard pile: '+p.discard.length+'</a> · Played cards (faded) go to your discard pile at the end of the turn.';
+  $("log").innerHTML=S.log.slice().reverse().map(l=>'<div><span class="t">R'+l.r+'</span> '+esc(l.t)+'</div>').join("");
+  renderDock()}
+
+function bookSel(){const p=me();return bookCheck(p,def(REG[UI.a]),UI.sel.map(u=>REG[u]),UI.shelf)}
+function renderDock(){let msg="",st="",b="";const p=me();
+  if(S.over){msg="The game is over.";b='<button data-do="results">Results</button>'}
+  else if(!myTurn()){msg=esc(cur().name)+" is taking a turn…"}
+  else if(!UI.mode){msg="<b>Your turn.</b> Click an action card in your hand to play it. You may play any number of them.";b='<button data-do="end">End turn</button>'}
+  else if(UI.mode==="keep"){const lim=keepLimit(p),k=UI.sel.length;msg="<b>End of turn.</b> You may keep up to "+lim+" card"+(lim===1?"":"s")+" in hand for next turn. Click to choose.";st=k+" of "+lim+" chosen.";b='<button data-do="keepok">'+(k?"End turn, keeping "+k:"End turn, keeping nothing")+'</button><button class="ghost" data-do="cancel">Back</button>'}
+  else if(UI.mode==="organize"){msg="<b>Organize.</b> Choose the trash cards to throw out."}
+  else{const d=def(REG[UI.a]),n=UI.sel.length;
+    if(UI.mode==="research"&&S.pending){msg="<b>Research.</b> Choose which cards to put back."}
+    else if(UI.mode==="research"){msg="<b>"+esc(d.name)+".</b> Select cards in your hand to discard, then click an argument stack.";{const lk=B(p,"Map")+(d.look||0),tk=n+(d.bonus||0);st=n?"Discarding "+n+": you will "+(lk?"look at "+(tk+lk)+" and keep "+tk:"take "+tk)+" from the stack you click.":"Nothing selected yet."}}
+    if(UI.mode==="network"){msg="<b>"+esc(d.name)+".</b> Select cards to discard, then click an upgrade you can afford.";st="Discards count as "+(n+(d.bonus||0)+B(p,"Letter"))+"."}
+    if(UI.mode==="conference"){msg="<b>"+esc(d.name)+".</b> Select one source in your hand.";b='<button data-do="ok" '+(n===1?"":"disabled")+'>Publish paper</button>'}
+    if(UI.mode==="article"){const ok=n===2&&sameEra(REG[UI.sel[0]],REG[UI.sel[1]]);
+      if(UI.step===1){msg="<b>Which card goes on your bookshelf?</b> The other goes to your discard pile.";b=UI.sel.map(u=>'<button data-show="'+u+'">'+esc(src(REG[u]).title)+'</button>').join("")}
+      else{msg="<b>"+esc(d.name)+".</b> Select two sources from the same era.";st=n===2&&!ok?"Those two are from different eras.":n+" of 2 selected.";b='<button data-do="ok" '+(ok?"":"disabled")+'>Continue</button>'}}
+    if(UI.mode==="book"&&UI.step===1){msg="<b>Which card from your hand goes on your bookshelf?</b> The others go back under their argument stacks.";st=bookSel().msg;b=UI.sel.map(u=>'<button data-bshow="'+u+'">No. '+src(REG[u]).num+" "+esc(src(REG[u]).title)+'</button>').join("")}
+    else if(UI.mode==="book"){const r=bookSel();msg="<b>"+esc(d.name)+".</b> Select "+(d.min||CONFIG.bookMin)+"+ cards that share a thesis letter (big or small): at least "+CONFIG.bookMinFromHand+" from hand, the rest from any bookshelf.";st=r.msg;b='<button data-do="ok" '+(r.ok?"":"disabled")+'>Continue</button>'}
+    b+='<button class="ghost" data-do="cancel">Cancel</button>'}
+  $("prompt").innerHTML=msg;$("status").textContent=st;$("btns").innerHTML=b}
+
+function modal(html,close){$("ovroot").innerHTML='<div class="ov" '+(close===false?"":'data-close="1"')+'><div class="modal">'+html+'</div></div>'}
+function closeModal(){$("ovroot").innerHTML=""}
+function readCard(uid){const c=REG[uid],d=src(c);
+  modal('<div class="mono" style="color:var(--mute)">'+esc(d.type)+' · '+esc(d.date)+'</div><h3>'+esc(d.title)+'</h3><div class="au" style="font-style:italic">'+esc(d.author)+'</div>'+
+    (d.quote?'<div class="q">'+esc(d.quote)+'</div>':"")+'<p>'+esc(d.content)+'</p><div class="bonus"><b>Passive bonus: '+esc(BONUS[d.type].name)+'.</b> '+esc(BONUS[d.type].text)+' Counts in your hand and on your bookshelf.</div><div class="sig">'+esc(d.significance)+'</div>'+
+    '<div class="tags" style="margin-top:12px"><span class="num">'+d.num+'</span>'+tagsHTML(d)+'<span class="mono">&nbsp;'+esc(d.era)+(d.stance?" · "+esc(d.stance):"")+'</span></div>'+
+    '<div style="margin-top:6px">Thesis '+d.arg+': '+esc(DATA.theses[d.arg].q)+(d.sub?'<br><span class="note">Also speaks to '+d.sub+': '+esc(DATA.theses[d.sub].q)+'</span>':"")+'</div>'+
+    '<div class="cit">'+esc(d.citation)+'</div><div class="btns"><button data-close="1">Close</button></div>')}
+function showCards(title,cards,note,pick){modal('<h3>'+esc(title)+'</h3>'+(note?'<p class="note">'+esc(note)+'</p>':"")+'<div class="row">'+(cards.length?cards.map(c=>{const o=pick?{cls:"click target",attr:'data-repl="'+c.uid+'"'}:{};return cardHTML(c,o)}).join(""):'<div class="note">Nothing here.</div>')+'</div><div class="btns"><button data-close="1">'+(pick?"Cancel":"Close")+'</button></div>')}
+function results(){const r=ranking();modal('<h3>'+esc(r[0].name)+' wins</h3><table><tr><th>Historian</th><th>Prestige</th><th>Books</th><th>Articles</th><th>Papers</th><th>Cited</th><th>Trash</th></tr>'+
+  r.map(q=>'<tr><td>'+esc(q.name)+'</td><td><b>'+q.prestige+'</b></td><td>'+q.cv.filter(x=>x.type==="book").length+'</td><td>'+q.cv.filter(x=>x.type==="article").length+'</td><td>'+q.cv.filter(x=>x.type==="paper").length+'</td><td>'+q.cites+'</td><td>'+(q.trash||0)+'</td></tr>').join("")+
+  '</table><p class="note">'+S.round+' rounds played.</p><div class="btns"><button class="ghost" data-close="1">Look at the table</button><button data-do="new">New game</button></div>')}
+function rules(){modal('<h3>How this mock-up plays</h3><ul class="rules">'+
+  '<li><b>Setup:</b> each player chooses one argument stack and shuffles its top '+CONFIG.startCards+' cards into a personal deck of six action cards. Each stack also hides '+CONFIG.trashPerStack+' trash cards.</li>'+
+  '<li>Draw '+CONFIG.handSize+' cards. On your turn play any number of action cards, then end the turn: you may keep one card, everything else goes to your discard pile, and you draw back up to '+CONFIG.handSize+'. When your deck runs out, your discard pile is shuffled to make a new one.</li>'+
+  '<li><b>Research:</b> discard n cards, take n cards from one argument stack into your discard pile. They reach your hand after your next shuffle.</li>'+
+  '<li><b>Attend Conference:</b> publish one source from hand as a conference paper (+'+CONFIG.paperPts+'). The card goes to your discard pile, so it can be presented again or published later.</li>'+
+  '<li><b>Publish an Article:</b> two sources from the same era (+'+CONFIG.articlePts+'). One goes face up on your bookshelf; the other goes to your discard pile and stays in your deck.</li>'+
+  '<li><b>Publish a Book:</b> '+CONFIG.bookMin+' or more cards that share a thesis letter, big or small . A book scores '+Object.keys(CONFIG.bookCardPts).filter(k=>k>=CONFIG.bookMin).map(k=>CONFIG.bookCardPts[k]+" for "+k+" cards").join(", ")+', plus '+CONFIG.bookBonus+'. At least '+CONFIG.bookMinFromHand+' must come from your hand; the rest may come from your bookshelf or a rival’s. Citing a rival’s card pays them +'+CONFIG.citePts+'. You may use each bookshelf card once. One card from your hand goes on your bookshelf; the other hand cards go back to the bottom of their argument stacks.</li>'+
+  '<li><b>Book sets:</b> every source has a number, 1 to 40, in chronological order. A book earns a flat bonus for each set it contains. <b>Sequence</b> (+'+CONFIG.runPts+'): '+CONFIG.runMin+' or more consecutive numbers. <b>Range of Sources</b> (+'+CONFIG.typesPts+'): '+CONFIG.typesMin+' or more different source types. Bookshelf cards in the book count toward sets.</li>'+
+  '<li><b>Network:</b> discard n cards and take an upgrade worth n or less from the conference space. It replaces a card of your choice in your discard pile: a replaced action is gone, a replaced source returns to the bottom of its stack.</li>'+
+  '<li><b>Passive bonuses:</b> every source carries a bonus set by its type. It counts while the card is in your hand, including for the action that spends it, and permanently once the card is on your bookshelf. Bonuses add up.<br>'+Object.keys(BONUS).map(t=>'<span class="note">'+t+": "+esc(BONUS[t].name)+". "+esc(BONUS[t].text)+'</span>').join("<br>")+'</li>'+
+  '<li><b>Organize:</b> remove any number of trash cards from your hand or discard pile. Trash cannot be published, and each one still in your deck at the end costs '+CONFIG.trashPenalty+' prestige. You may discard trash to pay for Research or Network.</li>'+
+  '<li><b>End:</b> the game lasts '+CONFIG.rounds.short+', '+CONFIG.rounds.medium+' or '+CONFIG.rounds.long+' rounds (short, medium, long). Highest prestige wins.</li></ul>'+
+  '<p class="note">All numbers and all eight upgrade cards are placeholders, set in the CONFIG and ACTIONS blocks at the top of the script.</p><div class="btns"><button data-close="1">Close</button></div>')}
+function setup(){const names=["Player 1","Prof. Vance","Prof. Ito","Prof. Marsh"];
+  modal('<h3>The Historians: deck-building mock-up</h3><p>Set the table. Bots play a simple greedy strategy; several humans can share this screen in turn.</p><table>'+
+  [0,1,2,3].map(i=>'<tr><td>Seat '+(i+1)+'</td><td><input id="nm'+i+'" value="'+names[i]+'"></td><td><select id="st'+i+'"><option value="h"'+(i===0?" selected":"")+'>Human</option><option value="b"'+(i===1?" selected":"")+'>Bot</option>'+(i>1?'<option value="x" selected>Empty</option>':"")+'</select></td></tr>').join("")+
+  '</table><p>Length: <select id="len"><option value="short">Short: '+CONFIG.rounds.short+' rounds</option><option value="medium" selected>Medium: '+CONFIG.rounds.medium+' rounds</option><option value="long">Long: '+CONFIG.rounds.long+' rounds</option></select></p><div class="btns"><button data-do="start">Start</button></div>',false)}
+function start(){const seats=[];for(let i=0;i<4;i++){const t=$("st"+i).value;if(t!=="x")seats.push({name:$("nm"+i).value.trim()||("Seat "+(i+1)),bot:t==="b"})}
+  newGame(seats,$("len").value);resetUI();busy=false;closeModal();VIEW=Math.max(0,S.players.findIndex(p=>!p.bot));render();draftNext()}
+function draftNext(){render();
+  if(S.phase!=="draft")return next();
+  const p=S.players[S.draftAt];
+  if(p.bot){botDraft();return draftNext()}
+  VIEW=p.i;render();
+  modal('<h3>'+esc(p.name)+': choose your field</h3><p>Take the top '+CONFIG.startCards+' cards of one argument stack into your starting deck. You will not see them until you choose, and some may be trash.</p><div class="row">'+
+    LETTERS.map(L=>{const n=S.stacks[L].length,ok=n>=CONFIG.startCards;return '<div class="stack pick '+(ok?"":"off")+'" style="background:var(--'+L+')" '+(ok?'data-draft="'+L+'"':"")+'><div class="L">'+L+'</div><div class="q">'+esc(DATA.theses[L].q)+'</div><div class="mono">'+n+' cards</div></div>'}).join("")+'</div>',false)}
+function rejModal(){const pd=S.pending,k=pd.seen.length-pd.keepN;
+  modal('<h3>You found '+pd.seen.length+' cards: keep '+pd.keepN+'</h3><p class="note">Click '+k+' card'+(k===1?"":"s")+' to put back under stack '+pd.L+'. The rest go to your '+(pd.toHand?"hand":"discard pile")+'.</p><div class="row">'+pd.seen.map(c=>cardHTML(c,{cls:"click "+(UI.sel.includes(c.uid)?"dim":""),attr:'data-rej="'+c.uid+'"'})).join("")+'</div><div class="btns"><button data-do="rejok" '+(UI.sel.length===k?"":"disabled")+'>Put back '+UI.sel.length+' of '+k+'</button></div>',false)}
+function orgModal(){const p=me(),t=[...p.hand,...p.discard].filter(c=>c.kind==="trash");
+  modal('<h3>Organize: throw out trash</h3><p class="note">From your hand and discard pile. Click a card to keep it instead.</p><div class="row">'+t.map(c=>trashHTML(c,{cls:"click "+(UI.sel.includes(c.uid)?"sel":""),attr:'data-org="'+c.uid+'"'})).join("")+'</div><div class="btns"><button class="ghost" data-do="cancel">Cancel</button><button data-do="orgok" '+(UI.sel.length?"":"disabled")+'>Throw out '+UI.sel.length+'</button></div>',false)}
+function humans(){return S.players.filter(p=>!p.bot).length}
+function next(){ // after any turn change
+  if(S.over){render();results();return}
+  const p=cur();
+  if(p.bot){busy=true;render();setTimeout(botLoop,650);return}
+  busy=false;
+  if(VIEW!==p.i&&humans()>1){modal('<h3>Pass the screen to '+esc(p.name)+'</h3><p>The next hand is hidden until you continue.</p><div class="btns"><button data-do="pass">I am '+esc(p.name)+'</button></div>',false);return}
+  VIEW=p.i;render()}
+function botLoop(){if(S.over)return;if(botStep()){render();setTimeout(botLoop,650)}else{endTurn(botKeep());next()}}
+function fail(r){if(typeof r==="string"){$("status").textContent=r;return true}return false}
+
+document.addEventListener("click",ev=>{
+  const t=ev.target,q=s=>t.closest("["+s+"]");let e;
+  if((e=q("data-read"))){ev.preventDefault();readCard(+e.dataset.read);return}
+  if((e=q("data-do"))){const k=e.dataset.do,p=S&&me();
+    if(k==="start")return start();if(k==="new")return setup();if(k==="results")return results();
+    if(k==="pass"){VIEW=cur().i;closeModal();return render()}
+    if(k==="cancel"){resetUI();closeModal();return render()}
+    if(k==="rejok"){const r=finishResearch(S.pending,UI.sel);if(typeof r==="string")return;closeModal();resetUI();return render()}
+    if(k==="draftok"){closeModal();return draftNext()}
+    if(k==="end"){if(!myTurn())return;resetUI();if(p.hand.length&&keepLimit(p)){UI.mode="keep";return render()}endTurn();return next()}
+    if(k==="keepok"){const ks=UI.sel.slice();resetUI();endTurn(ks);return next()}
+    if(k==="orgok"){const r=doOrganize(p,UI.a,UI.sel);closeModal();resetUI();render();fail(r);return}
+    if(k==="ok"){
+      if(UI.mode==="conference"){if(!fail(doConference(p,UI.a,UI.sel[0]))){resetUI();render()}}
+      else if(UI.mode==="article"){UI.step=1;renderDock()}
+      else if(UI.mode==="book"){if(bookSel().ok){UI.step=1;render()}}
+      return}}
+  if((e=q("data-draft"))){const p=S.players[S.draftAt],r=doDraft(e.dataset.draft);if(typeof r==="string")return;
+    modal('<h3>'+esc(p.name)+': your starting sources</h3><p class="note">These are shuffled into your deck with your six action cards.</p><div class="row">'+r.got.map(c=>cardHTML(c)).join("")+'</div><div class="btns"><button data-do="draftok">Continue</button></div>',false);return}
+  if((e=q("data-rej"))){if(q("data-read")&&t.closest("[data-read]"))return;const u=+e.dataset.rej,i=UI.sel.indexOf(u),k=S.pending.seen.length-S.pending.keepN;if(i>=0)UI.sel.splice(i,1);else{while(UI.sel.length>=k)UI.sel.shift();UI.sel.push(u)}return rejModal()}
+  if((e=q("data-org"))){const u=+e.dataset.org,i=UI.sel.indexOf(u);if(i>=0)UI.sel.splice(i,1);else UI.sel.push(u);return orgModal()}
+  if((e=q("data-bshow"))){const p=me();if(!fail(doBook(p,UI.a,UI.sel,UI.shelf,+e.dataset.bshow))){resetUI();render()}return}
+  if((e=q("data-show"))){const p=me();if(!fail(doArticle(p,UI.a,UI.sel[0],UI.sel[1],+e.dataset.show))){resetUI();render()}return}
+  if((e=q("data-repl"))){const p=me();const r=doNetwork(p,UI.a,UI.sel,UI.up,+e.dataset.repl);closeModal();if(!fail(r))resetUI();render();return}
+  if((e=q("data-close"))){if(t===e||t.tagName==="BUTTON"){closeModal()}return}
+  if((e=q("data-pile"))){ev.preventDefault();showCards("Your discard pile",me().discard,"These return to your deck at the next shuffle.");return}
+  if(!S||!myTurn())return;
+  const p=me();
+  if((e=q("data-stack"))){if(S.pending)return;const r=doResearch(p,UI.a,UI.sel,e.dataset.stack);if(!fail(r)){const d=def(REG[UI.a]);
+      if(r.pending){UI.sel=[];render();return rejModal()}
+      resetUI();render();showCards("You found",r.got,d.toHand?"Added to your hand.":"Added to your discard pile. You will draw them after your next shuffle.")}return}
+  if((e=q("data-up"))){UI.up=e.dataset.up;showCards("Replace which card with "+ACTIONS[UI.up].name+"?",[...UI.sel.map(u=>REG[u]),...p.discard],"Choose a card from your discard pile, including the ones you are discarding now. A replaced action is removed; a replaced source goes back to its stack.",true);return}
+  if((e=q("data-shelf"))){if(UI.step===1)return;const u=+e.dataset.shelf,i=UI.shelf.indexOf(u);if(i>=0)UI.shelf.splice(i,1);else UI.shelf.push(u);return render()}
+  if((e=q("data-hand"))){const u=+e.dataset.hand,c=REG[u];
+    if(UI.mode==="keep"){const i=UI.sel.indexOf(u),lim=keepLimit(p);if(i>=0)UI.sel.splice(i,1);else{while(UI.sel.length>=lim)UI.sel.shift();UI.sel.push(u)}return render()}
+    if(!UI.mode){const d=def(c);if(d.kind==="draw"){doDraw(p,u);return render()}
+      if(d.kind==="organize"){const t=[...p.hand,...p.discard].filter(x=>x.kind==="trash");if(!t.length){$("status").textContent="You have no trash cards in your hand or discard pile.";return}
+        UI.mode="organize";UI.a=u;UI.sel=t.map(x=>x.uid);render();return orgModal()}
+      UI.mode=d.kind;UI.a=u;return render()}
+    if(UI.step===1)return;
+    const i=UI.sel.indexOf(u);if(i>=0)UI.sel.splice(i,1);else{if(UI.mode==="conference")UI.sel=[];if(UI.mode==="article"&&UI.sel.length>=2)UI.sel.shift();UI.sel.push(u)}
+    return render()}
+});
+$("bRules").onclick=rules;$("bNew").onclick=setup;
+setup();
+}
+if(typeof module!=="undefined")module.exports={botReject,finishResearch,bookSets,B,BONUS,newGame,botStep,botDraft,botKeep,endTurn,trashCount,ranking,books,CONFIG,ACTIONS,get S(){return S},cur};
+</script>
+</body>
+</html>

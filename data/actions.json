@@ -1,0 +1,96 @@
+{
+  "conference": {
+    "name": "Attend Conference",
+    "kind": "conference",
+    "value": 0,
+    "text": "Choose one source in hand and present it as a conference paper. The card goes to your discard pile."
+  },
+  "article": {
+    "name": "Publish an Article",
+    "kind": "article",
+    "value": 0,
+    "text": "Choose two sources in hand from the same era. Showcase one on your bookshelf."
+  },
+  "book": {
+    "name": "Publish a Book",
+    "kind": "book",
+    "value": 0,
+    "text": "Choose four or more cards on one thesis: from hand, your bookshelf, or rivals' bookshelves (a citation)."
+  },
+  "research": {
+    "name": "Research",
+    "kind": "research",
+    "value": 0,
+    "text": "Discard n cards from hand. Add n cards from one argument stack to your discard pile."
+  },
+  "network": {
+    "name": "Network",
+    "kind": "network",
+    "value": 0,
+    "text": "Discard n cards from hand. Take an upgrade worth n or less; it replaces a card in your discard pile."
+  },
+  "organize": {
+    "name": "Organize",
+    "kind": "organize",
+    "value": 0,
+    "text": "Remove any number of trash cards from your hand or discard pile. They leave the game."
+  },
+  "sabbatical": {
+    "name": "Sabbatical",
+    "kind": "draw",
+    "value": 1,
+    "draw": 2,
+    "text": "Draw 2 cards."
+  },
+  "keynote": {
+    "name": "Keynote Address",
+    "kind": "conference",
+    "value": 2,
+    "pts": 6,
+    "text": "Conference paper worth 6 instead of 2."
+  },
+  "travel": {
+    "name": "Travel Grant",
+    "kind": "research",
+    "value": 2,
+    "look": 2,
+    "text": "Research: look at 2 more cards than you take, then put 2 back under the stack."
+  },
+  "society": {
+    "name": "Society Membership",
+    "kind": "network",
+    "value": 2,
+    "bonus": 1,
+    "text": "Network: your discards count as n+1."
+  },
+  "agent": {
+    "name": "Literary Agent",
+    "kind": "article",
+    "value": 3,
+    "pts": 5,
+    "text": "Article worth 5 more prestige."
+  },
+  "assistant": {
+    "name": "Research Assistant",
+    "kind": "research",
+    "value": 3,
+    "toHand": true,
+    "look": 1,
+    "text": "Research: look at 1 more card than you take and put 1 back. The cards you keep go straight to your hand."
+  },
+  "fellowship": {
+    "name": "Fellowship",
+    "kind": "draw",
+    "value": 3,
+    "draw": 3,
+    "text": "Draw 3 cards."
+  },
+  "press": {
+    "name": "University Press",
+    "kind": "book",
+    "value": 4,
+    "pts": 4,
+    "min": 3,
+    "text": "Book needs only 3 cards and is worth 4 more prestige."
+  }
+}

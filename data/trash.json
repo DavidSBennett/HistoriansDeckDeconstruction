@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Misfiled Folder",
+    "text": "The box label promised something else entirely."
+  },
+  {
+    "name": "Illegible Microfilm",
+    "text": "Three hours at the reader and not one usable line."
+  },
+  {
+    "name": "Unsourced Anecdote",
+    "text": "Everyone repeats it. Nobody can say where it came from."
+  },
+  {
+    "name": "Duplicate Copy",
+    "text": "You already have this document. Twice."
+  },
+  {
+    "name": "Redacted Memo",
+    "text": "The date survives. Nothing else does."
+  },
+  {
+    "name": "Later Recollection",
+    "text": "Written forty years on, and it contradicts the record."
+  }
+]
