@@ -11,12 +11,13 @@ test("every deck in data/decks validates with no errors", () => {
   for (const id of decks) assert.deepEqual(validateData(loadData(id)).errors, [], "deck " + id);
 });
 
-test("the AI History deck has the shape the brief describes", () => {
+test("the AI History deck has four theses of equal size, numbered 1 to n", () => {
   const { deck } = base();
+  const n = deck.cards.length;
   assert.deepEqual(Object.keys(deck.theses), ["A", "B", "C", "D"]);
-  assert.equal(deck.cards.length, 40);
-  for (const L of "ABCD") assert.equal(deck.cards.filter((c) => c.arg === L).length, 10);
-  assert.deepEqual([...new Set(deck.cards.map((c) => c.num))].sort((a, b) => a - b), Array.from({ length: 40 }, (_, i) => i + 1));
+  assert.equal(n, 60);
+  for (const L of "ABCD") assert.equal(deck.cards.filter((c) => c.arg === L).length, n / 4);
+  assert.deepEqual([...new Set(deck.cards.map((c) => c.num))].sort((a, b) => a - b), Array.from({ length: n }, (_, i) => i + 1));
 });
 
 test("validator catches a card with an unknown thesis or type", () => {

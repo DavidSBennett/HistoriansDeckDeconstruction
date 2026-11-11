@@ -55,13 +55,13 @@ test("pictures are matched by thesis letter and sequence number, preferring .jpg
 test("every picture a card names exists in the deck's images folder", () => {
   const { deck } = loadData("ai-history");
   const named = deck.cards.filter((c) => c.image);
-  assert.ok(named.length >= 30);
+  assert.ok(named.length >= 55);
   for (const c of named) assert.ok(fs.existsSync(new URL(`../data/decks/ai-history/images/${c.image}`, import.meta.url)), c.image);
 });
 
 test("the AI History deck in data/ is the Historians-Deck-Builder CSV edition", () => {
   const { deck } = loadData("ai-history");
   assert.match(deck.theses.A.q, /thinking machine conceived in theory/);
-  assert.ok(deck.cards.some((c) => c.title === "Richardson's Forecast-Factory Map" && c.num === 1));
+  assert.ok(deck.cards.some((c) => c.title === "Inside the Turk: Racknitz's Cutaway" && c.num === 1));
   assert.deepEqual(validateData(loadData("ai-history")).errors, []);
 });

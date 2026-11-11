@@ -442,9 +442,15 @@ frontend/    React 18 + Vite 5 client, plain JS; imports engine/js through the @
 - **`num`,** the chronological number the Sequence set uses, is computed from each card's earliest
   mentioned date. A year alone counts as the start of that year; ties keep CSV order.
   - One judgement call: Ashby's Journal is dated "Kept 1928-1972; entry quoted June 13, 1959", so it sorts
-    by 1928, as #2.
-  - In this deck chronology follows the theses almost exactly (A ≈ 1–11, B 9–20, C 21–30, D 31–40), so
+    by 1928, as #5 since the 60-card edition (2026-11-11).
+  - The same rule puts "Map of Shakey's Experimental Environment" (dated "1984 (experiments 1966-1972)")
+    at 1966, as #36. Reword the date in the CSV if the map should sort as 1984.
+  - In this deck chronology follows the theses almost exactly (A ≈ 1–16, B 14–30, C 31–45, D 46–60), so
     Sequence sets nearly always come from one thesis.
+- **The 60-card edition** (2026-11-11) has 15 cards per thesis, up from 10. It adds new cards, including the
+  false-lead cards (the Turk, Clever Hans, the GENIAC kit). Simulated (seeds 1–1,000, medium):
+  2 players 97.2 / 73.9; 3 players 139.5 / 116.0 / 91.5; 4 players 184.8 / 159.0 / 137.4 / 109.1. At the end
+  of a 4-player game an archive is empty 11% of the time, down from 84% with 40 cards; field win rates stay even.
 - The CSV's `bonus` column (1 on every card) isn't used: bonuses come from the source type.
 - **Card pictures** (2026-11-11) come from `Historians-Deck-Builder/AI History/photo-gallery`, through the
   importer's `--images` option.
@@ -452,8 +458,10 @@ frontend/    React 18 + Vite 5 client, plain JS; imports engine/js through the @
   - `.jpg` wins when there are several: `c10.jpg` is the clean Shakey photo, `c10.png` a letterboxed screenshot.
   - Each picture is resized with PHP's GD library (`tools/resize-images.php`) to at most 640 px and saved as
     `data/decks/<id>/images/<A1>.jpg`. The card's `image` field names that file.
-  - 38 of 40 cards have a picture, 1.7 MB in all, down from 36 MB of originals. C8 (the Lighthill debate) and
-    D3 (the Moscow missile-defence map) have none, and show a placeholder in the thesis colour.
+  - 58 of 60 cards have a picture, 2.5 MB in all. D12 ("Computers in Your Future: An Exchange") and D14
+    ("Some Expert Systems Need Common Sense") have none, and show a placeholder in the thesis colour.
+  - Files with a suffix (`a14-handbill.png`, `c8-mccarthy.jpg`) are alternates and are not used; rename one
+    to `<letter><number>` to use it instead.
   - The CSV's `image_url` is kept as `imageUrl`, and its `description` as `imageCredit`. The full-card view
     shows the credit under the picture, so check that each credit describes the gallery file now used.
   - The client asks for `/decks/<id>/images/<file>`. Vite serves it from `data/` in development, and

@@ -160,7 +160,8 @@ test("polling: unchanged versions return nothing; rules come from the game's sna
   const again = await alice.get("dk_getState.php", `?game_id=${gameId}&since=${s.json.game.version}`);
   assert.deepEqual(again.json, { ok: true, changed: false, version: s.json.game.version });
   const rules = await bob.get("dk_rules.php", `?game_id=${gameId}`);
-  assert.equal(rules.json.rules.deck.cards.length, 40);
+  const deck = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "decks", "ai-history", "deck.json"), "utf8"));
+  assert.equal(rules.json.rules.deck.cards.length, deck.cards.length);
   assert.ok(rules.json.rules.market.length > 0);
 });
 
