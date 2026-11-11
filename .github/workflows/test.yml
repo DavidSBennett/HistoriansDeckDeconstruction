@@ -34,7 +34,10 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
+          extensions: pdo_sqlite, mbstring
           tools: none
           coverage: none
       - run: npm run lint:php
       - run: npm run conformance
+      # The whole backend over HTTP, on PHP's built-in server with a throwaway SQLite database.
+      - run: npm run test:backend

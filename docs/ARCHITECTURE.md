@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: build steps 1–5 done (2026-11-11); step 5 is waiting for review. The original spec is [BRIEF.md](BRIEF.md); this file records what
+Status: build steps 1–6 done (2026-11-11); next is step 7, the React client. The original spec is [BRIEF.md](BRIEF.md); this file records what
 was decided since and where the mock-up's code differs from the brief.
 
 ## Decisions
@@ -21,7 +21,7 @@ was decided since and where the mock-up's code differs from the brief.
 3. ✔ Rules changes in the JS engine (Research, tiered upgrade piles), with new reference numbers. **Review stop.**
 4. ✔ Protocol wrapper (turn, phase, pending choice, repeated ids), structured events, `view(state, seat)`, and hidden-information tests (see "Protocol and views" below).
 5. ✔ PHP engine plus conformance: the JS engine records test games, the PHP engine replays them and must match exactly; GitHub Actions runs both (see "The PHP engine" below). **Review stop.**
-6. Shared login, DB migrations, PHP backend (lobby, polling, actions, server-side bots).
+6. ✔ Shared login, DB migrations, PHP backend (lobby, polling, actions, server-side bots), tested end to end over HTTP (see "Backend and login" below).
 7. React client, using the mock-up's layout and click flow.
 8. Deploy workflow to projecta.thehistorians.org; first migration run by hand; two-browser smoke test.
 
@@ -108,15 +108,68 @@ With no-cost Research, tiered piles and book cards kept:
   replace. The brief's "Society Membership tests as not worth buying" has the same cause. A fix would change
   the bots, so it waits for your call.
 
-## Login (step 6)
+## Backend and login (step 6)
 
-- projecta's PHP uses two DB connections: its own database for game tables (`dk_*`), and Board's database for
-  `users` and `user_sessions`, using the same token format and 30-day expiry as Board. Credentials for both
-  live in `config.secret.php` (git-ignored, excluded from rsync); cPanel must grant the projecta DB user access to Board's database.
-- Single sign-on: on login, a session cookie is set with `Domain=.thehistorians.org; Secure; HttpOnly; SameSite=Lax`.
-  Each game's backend accepts that cookie or the existing `Authorization: Bearer` header. Because cookies are
-  sent automatically, every state-changing endpoint checks `Origin` against `*.thehistorians.org` and requires a JSON body.
-- What other games need (separate work, each in its own repo):
+`backend/` holds flat PHP endpoints, like Board's backend, all returning JSON. Setup on GreenGeeks is in
+[database/INSTALL.md](../database/INSTALL.md).
+
+**Database access uses PDO, not mysqli.** On the server it talks to MySQL. In tests and CI it talks to SQLite,
+because there is no MySQL locally. `backend/db.php` covers the few places where the two differ: the current
+time, time arithmetic, row locks and starting a write transaction. This is the one deliberate departure from
+Board's and VotingGame's `mysqli`; it lets the whole backend run end to end before anything is deployed.
+
+**Tables** (`database/01_dk_games.sql`, in projecta's own database):
+- `dk_games`: join code, host, status (`lobby`, `playing`, `finished`, `cancelled`), length, deck,
+  `state_version`, and whose move it is.
+  - `state` holds the engine state as one JSON document, so rule changes never need a migration.
+  - `rules` holds a snapshot of `data/` taken at the start, so a rebalance deployed mid-game can't change a
+    game in progress. `dk_rules.php` serves that snapshot, so the client shows the game's own card text and
+    numbers.
+- `dk_seats`: seat number (equal to the engine's seat), the Board user id or a bot, and a name.
+
+**Endpoints:**
+
+| Endpoint | Who | What |
+|---|---|---|
+| `users_login.php` POST | anyone | `{username, password}` checked against Board's `users` with Board's lockout (10 failures, 15 minutes); creates a Board session and sets the shared cookie |
+| `users_me.php` GET | signed in | the current user, or 401 with `accountsSite` (Board, where people register and reset passwords) |
+| `users_logout.php` POST | signed in | deletes the session (on every site sharing it) and clears the cookie |
+| `dk_createGame.php` POST | signed in | `{length}`: a lobby with you as host in seat 0 |
+| `dk_joinGame.php` POST | signed in | `{join_code}`: the next seat. Codes are 6 characters from Board's alphabet, and dashes, spaces and lowercase are accepted |
+| `dk_addBot.php`, `dk_setLength.php` POST | host, lobby | add a bot; change the length |
+| `dk_removeSeat.php` POST | lobby | the host removes any seat, and a player can leave. Seats renumber to stay 0..n-1. If the host leaves, the game is cancelled |
+| `dk_startGame.php` POST | host | takes the rules snapshot, deals with a fresh random seed, and plays bot drafts |
+| `dk_getState.php` GET | seated | the poll: `?game_id&since=version&log_from=k`. Returns `{changed:false}` when nothing changed, otherwise lobby info and your view, with only new log entries |
+| `dk_action.php` POST | seated | `{game_id, version, action, log_from}`: one protocol message, then bots play. A stale `version` gets 409, so a double click can't send a move twice |
+| `dk_myGames.php` GET | signed in | your games, with whose move it is |
+| `dk_rules.php` GET | seated | the game's rules snapshot |
+
+Every change runs in a transaction that locks the game row and bumps `state_version`, the number clients poll
+for.
+
+**Sign-in.**
+- Sessions are rows in **Board's** `user_sessions` table: 64-hex tokens, 30 days, issued exactly as Board
+  issues them, so a token from either site works on both.
+- The token arrives either as Board's `Authorization: Bearer` header or as the `th_session` cookie, set for
+  all of `.thehistorians.org` (Secure, HttpOnly, SameSite=Lax).
+- Browsers attach cookies automatically, so a cookie-authenticated POST must be JSON and come from this host
+  or an https `*.thehistorians.org` page. Otherwise it gets 403 or 415.
+
+**Tests** (`npm run test:backend`, also in CI). `tests/backend/backend.itest.mjs` builds a throwaway SQLite
+database with Board-style accounts and starts PHP's built-in server on the real `backend/` folder. It then
+drives everything over HTTP:
+- sign-in by cookie and by Bearer token; wrong passwords, a disabled account, and the lockout;
+- the same-site checks;
+- the whole lobby;
+- polling;
+- a complete game between two people and a bot, with Research, an out-of-turn move, a stale version, and
+  a check that no rival hand, seed or random-generator state ever appears in a response;
+- malformed requests, and sign-out.
+
+PHP warnings are turned on, so any notice would break the JSON and fail the test.
+
+**Single sign-on with the other games** (separate work, each in its own repo; the Board steps are also listed
+in [database/INSTALL.md](../database/INSTALL.md)):
   - **Historians_Board_Version:** set and clear the shared cookie on login and logout, and accept it on requests.
   - **Historians_Variant** and **thehistorians.org** have their own `users` tables. Moving them onto Board's accounts means merging users; emails that exist in both need a rule.
   - **VotingGame-2024** is on davidsbennett.com and has no login, so a `.thehistorians.org` cookie can't reach it.
@@ -271,8 +324,9 @@ tools/       extract-data, validate-data, simulate, mockup-sim, parity, record-c
 tests/       node:test suites
 engine/js/   reference engine: rng, rules, engine, bots, describe, protocol, view
 engine/php/  authoritative port: rng, rules, engine, bots, protocol, view, canon; tests/conformance.php
-backend/     step 6: PHP endpoints, flat like Board's backend/
-database/    step 6: NN_description.sql migrations, run by hand
+backend/     PHP endpoints (users_*, dk_*), lib/db/auth/games helpers, tests/ (SQLite schema and setup)
+database/    NN_description.sql migrations, run by hand; INSTALL.md for cPanel setup
+tests/backend/  end-to-end HTTP test of the backend (npm run test:backend)
 frontend/    step 7: React 18 + Vite + Tailwind, plain JS
 ```
 

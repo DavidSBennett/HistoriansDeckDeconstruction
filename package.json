@@ -15,6 +15,7 @@
     "sim:mockup": "node tools/mockup-sim.mjs",
     "parity": "node tools/parity.mjs",
     "conformance": "node tools/record-conformance.mjs && php engine/php/tests/conformance.php",
-    "lint:php": "node tools/lint-php.mjs"
+    "lint:php": "node tools/lint-php.mjs",
+    "test:backend": "node --test \"tests/backend/*.itest.mjs\""
   }
 }

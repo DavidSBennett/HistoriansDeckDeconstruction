@@ -20,6 +20,9 @@ Needs Node 22 or later, and PHP 8.1 or later for the PHP checks. There are no de
 | `npm run sim:mockup` | The same simulation as `sim`, but with the mock-up's own logic, for reference numbers. |
 | `npm run conformance` | Records 54 games with the JS engine and replays them with the PHP engine, which must match after every step. Needs `php` (8.1+) on the PATH. |
 | `npm run lint:php` | Syntax-checks every PHP file. |
+| `npm run test:backend` | Runs the PHP backend on PHP's built-in server with a throwaway SQLite database and tests it over HTTP. |
+
+Installing on GreenGeeks: [database/INSTALL.md](database/INSTALL.md).
 
 GitHub Actions runs the tests, a slice of the parity check, and the PHP checks on PHP 8.1 and 8.3 on every push.
 | `npm run data:check` | Reports whether `data/` still matches the mock-up's constants. |

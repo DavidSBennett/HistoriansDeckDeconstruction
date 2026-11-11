@@ -1,0 +1,9 @@
+# Pass the Authorization header through to PHP (cPanel's Apache sometimes strips it).
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Library files and secrets are never requested directly.
+<FilesMatch "^(lib|db|auth|games|config\.secret.*)\.php$">
+  Require all denied
+</FilesMatch>
