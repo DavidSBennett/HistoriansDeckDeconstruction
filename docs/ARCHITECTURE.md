@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: build steps 1–3 done (2026-11-11); step 3 is waiting for review. The original spec is [BRIEF.md](BRIEF.md); this file records what
+Status: build steps 1–4 done (2026-11-11); next is step 5, the PHP engine. The original spec is [BRIEF.md](BRIEF.md); this file records what
 was decided since and where the mock-up's code differs from the brief.
 
 ## Decisions
@@ -19,7 +19,7 @@ was decided since and where the mock-up's code differs from the brief.
 1. ✔ Repo setup; mock-up constants extracted to `data/`; data validator; mock-up simulator.
 2. ✔ JS engine: exact port with serialisable state, checked against the mock-up step by step (see "The JS engine" below). **Review stop.**
 3. ✔ Rules changes in the JS engine (Research, tiered upgrade piles), with new reference numbers. **Review stop.**
-4. Protocol wrapper (turn, phase, pending choice, repeated ids), structured events, `view(state, seat)`, and hidden-information tests.
+4. ✔ Protocol wrapper (turn, phase, pending choice, repeated ids), structured events, `view(state, seat)`, and hidden-information tests (see "Protocol and views" below).
 5. PHP engine plus conformance: the JS engine records test games, the PHP engine replays them and must match exactly; GitHub Actions runs both before any deploy. **Review stop.**
 6. Shared login, DB migrations, PHP backend (lobby, polling, actions, server-side bots).
 7. React client, using the mock-up's layout and click flow.
@@ -79,19 +79,27 @@ second-tier names are placeholders too):
 **Bots.** No-cost Research needs no discards, so the bot just picks an archive, with the same preference as
 before (the thesis it holds most of). A bot buys at most one card from each pile.
 
+**Book cards stay in the author's deck (decided 2026-11-11).** When you publish a book, the showcased card
+goes on your bookshelf as before, and the other hand cards go to **your own discard pile**. They are no
+longer put back under the archives. Articles already worked this way: the second source goes to your discard
+pile. Setting: `config.bookCardsTo` is `"discard"` (`"archive"` is the mock-up's rule, used by the parity check).
+
 ### New reference numbers (2026-11-11, `npm run sim`, seeds 1–1,000)
 
-| Game | Average prestige by place | Mock-up rules |
-|---|---|---|
-| 2 players, medium | 77.4 / 59.2 | 68.5 / 50.1 |
-| 3 players, medium | 103.8 / 85.5 / 67.4 | 90.5 / 72.9 / 55.7 |
-| 4 players, medium | 133.1 / 111.4 / 95.3 / 76.3 | 115.3 / 96.2 / 80.3 / 62.9 |
-| 4 players, long | 234.8 / 201.1 / 175.9 / 147.7 | |
+With no-cost Research, tiered piles and book cards kept:
 
-- **Field balance evened out.** Two-player win rates by starting field are now A 51%, B 48%, C 50%, D 50%
-  (B was 43%).
-- **Archives run dry in big games.** At the end of medium games, archives average 7.6 cards (2 players),
-  4.8 (3) and 2.0 (4). In long four-player games, 80% of archives are empty.
+| Game | Average prestige by place | Before keeping book cards | Mock-up rules |
+|---|---|---|---|
+| 2 players, medium | 90.5 / 68.5 | 77.4 / 59.2 | 68.5 / 50.1 |
+| 3 players, medium | 124.5 / 101.6 / 80.5 | 103.8 / 85.5 / 67.4 | 90.5 / 72.9 / 55.7 |
+| 4 players, medium | 162.1 / 137.6 / 117.8 / 94.0 | 133.1 / 111.4 / 95.3 / 76.3 | 115.3 / 96.2 / 80.3 / 62.9 |
+| 4 players, long | 267.8 / 232.6 / 204.3 / 171.2 | 234.8 / 201.1 / 175.9 / 147.7 | |
+
+- **Field balance stays even.** Two-player win rates by starting field: A 54%, B 46%, C 48%, D 50%.
+- **Archives now run dry.** Books used to return cards to the archives; now only Network replacements and
+  Research put-backs do. At the end of medium games, archives average 6.6 cards (2 players), 3.1 (3) and
+  0.2 (4). They are empty in 28%, 48% and 84% of cases. In long four-player games, every archive is empty by
+  the end, so late Research does nothing. A bigger deck, which the brief already expects, is the obvious lever.
 - **Second tiers sell.** In four-player medium games, every pile except Society sells its second copy in
   20–90% of games.
 - **Society Membership is never bought, under either set of rules.** That's a bot quirk, not a balance
@@ -161,14 +169,66 @@ length, 11,700 games in all.
 
 `npm run sim` gives the same numbers as `npm run sim:mockup` and runs about 3,000 games per second.
 
+## Protocol and views (step 4)
+
+The server changes a game only through `engine/js/protocol.mjs`; the PHP backend will call its port.
+
+- `apply(S, R, seat, message)` returns `{ state, events }` or `{ error }`, and never changes `S`. Before the
+  rules run, it checks:
+  - the message's shape: integer card ids; lists of at most 100 with no repeated id; names for archives and piles;
+  - that the game isn't over and the phase is right;
+  - that it is this seat's turn (or this seat's draft);
+  - that a pending Research choice comes first. Nothing else is allowed until it's resolved, not even ending
+    the turn, which in the mock-up would lose the cards being looked at.
+- `advanceBots(S, R)` plays bot seats until a human must act. The server calls it after `newGame` and after
+  every successful `apply`. `toAct(S)` says who must act next.
+- Messages: `draft {stack}`, `playDraw {card}`, `organize {card, trash}`, `research {card, stack, discard?}`,
+  `researchChoose {putBack}`, `conference {card, source}`, `article {card, sources:[a,b], showcase}`,
+  `book {card, hand, shelf?, showcase?}`, `network {card, discard, pile, replace}`, `endTurn {keep?}`.
+
+`engine/js/view.mjs` builds what one seat sees: `view(S, R, seat)`, or `seat = null` for a spectator. It's the
+only thing the server sends a client.
+
+- **Visible to everyone:**
+  - every player's name, field, prestige, CV, citations, bookshelf, played cards and pile sizes;
+  - each archive's size;
+  - the conference space;
+  - the log, with private details removed.
+- **Visible only to you:** your own hand and discard pile, your pending Research cards, and your own private
+  log details.
+- **Never sent:** other players' hands and discard piles; the order or contents of any deck, your own
+  included; archive order or contents; the seed; the random generator's state.
+- **Private log details** (`PRIVATE_FIELDS`), visible only to the acting player:
+  - the cards drawn in the draft;
+  - the trash thrown out;
+  - the cards taken and put back in Research;
+  - an article's second source;
+  - a book's hand cards other than the showcase, which go to the author's discard pile (the showcased card stays public);
+  - Network's discards and the replaced card. The replaced card's kind and, for a source, its archive stay
+    public, since the archive count shows it anyway. This applies the answer I suggested to the open
+    question below.
+- A view keeps the state's shape for your own seat, so the client can run `bookCheck`, `bonus` and
+  `keepLimit` on it for live previews. A test checks they give the same answers as on the full state.
+
+**Tests.**
+- **Hidden information** (`tests/view.test.mjs`). For hundreds of real game states and every seat, everything
+  that seat may not know is scrambled (`tools/lib/perturb.mjs`), and the view must not change by a single
+  byte. A second test feeds the check seven deliberately leaky views (rival hand, rival discard, own deck
+  order, archive order, seed, random state, unredacted log) and confirms it catches each one.
+- **Protocol** (`tests/protocol.test.mjs`).
+  - Games played through `apply` with 30% of messages corrupted on purpose: repeated ids, the wrong seat,
+    wrong types, someone else's cards, oversized lists, garbage. Nothing crashes, the input state is never
+    changed, and every message that can't be legal is refused.
+  - A game played through the protocol matches the same choices made directly on the engine.
+
 ## Repository layout
 
 ```
 reference/   the mock-up, unchanged; the parity tests load its script
 data/        config.json, actions.json, bonuses.json, trash.json, decks/<id>/deck.json
-tools/       extract-data, validate-data, simulate, mockup-sim, parity (later: record test games)
+tools/       extract-data, validate-data, simulate, mockup-sim, parity; lib/ has fuzz, play and perturb helpers
 tests/       node:test suites
-engine/js/   reference engine: rng, rules, engine, bots, describe (step 4 adds protocol and view())
+engine/js/   reference engine: rng, rules, engine, bots, describe, protocol, view
 engine/php/  step 5: authoritative port
 backend/     step 6: PHP endpoints, flat like Board's backend/
 database/    step 6: NN_description.sql migrations, run by hand
@@ -185,5 +245,6 @@ frontend/    step 7: React 18 + Vite + Tailwind, plain JS
 
 ## Open items
 
-- Are cards discarded to pay for an action (and the card Network replaces) public? Suggested: private, and the log shows only counts.
+- Are cards discarded to pay for an action (and the card Network replaces) public? Built as suggested: private, and the log shows only counts (see `PRIVATE_FIELDS` in `engine/js/view.mjs`; making one public means deleting it from that list, then porting the change to PHP).
+- An article's second source and a book's non-showcased hand cards go to the author's discard pile, which rivals can't see, so the log names them only to the author. Publications might reasonably show all their sources; it's a one-line change.
 - What happens when a human seat stops playing (for example, the host can hand it to a bot)?

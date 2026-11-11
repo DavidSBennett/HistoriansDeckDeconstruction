@@ -215,7 +215,11 @@ export function finishResearch(S, R, pend, rej) {
   S.stacks[pend.L].push(...back);
   (pend.toHand ? p.hand : p.discard).push(...got);
   S.pending = null;
-  log(S, { type: "research", seat: pend.seat, n: pend.n, L: pend.L, seen: pend.seen.length, got: got.slice(), back: back.slice(), toHand: pend.toHand });
+  log(S, {
+    type: "research", seat: pend.seat, n: pend.n, L: pend.L, seen: pend.seen.length,
+    took: got.length, putBack: back.length, toHand: pend.toHand,
+    got: got.slice(), back: back.slice(), // private to the researcher
+  });
   return { got };
 }
 
@@ -324,7 +328,8 @@ export function doBook(S, R, seat, aUid, handUids, shelfUids, showUid) {
   for (const u of handUids) {
     take(p.hand, u);
     if (u === showUid) p.shelf.push({ uid: u, usedBy: [seat] });
-    else S.stacks[src(S, R, u).arg].push(u);
+    else if (R.bookCardsTo === "archive") S.stacks[src(S, R, u).arg].push(u); // the mock-up's rule
+    else p.discard.push(u); // they stay in the author's deck
   }
   const cited = [];
   for (const f of r.ents) {
@@ -370,7 +375,11 @@ export function doNetwork(S, R, seat, aUid, disc, pileId, replUid) {
   if (isSource(S, out)) S.stacks[src(S, R, out).arg].push(out);
   p.discard.push(mk(S, "action", tier));
   S.market[pileId]--;
-  log(S, { type: "network", seat, n: disc.length, pile: pileId, up: tier, out, disc: disc.slice() });
+  log(S, {
+    type: "network", seat, n: disc.length, pile: pileId, up: tier,
+    outKind: kindOf(S, out), outArchive: isSource(S, out) ? src(S, R, out).arg : null,
+    out, disc: disc.slice(), // private to the buyer
+  });
   return null;
 }
 

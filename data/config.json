@@ -14,6 +14,7 @@
   "citePts": 2,
   "bookMin": 4,
   "bookMinFromHand": 2,
+  "bookCardsTo": "discard",
   "rounds": {
     "short": 6,
     "medium": 10,

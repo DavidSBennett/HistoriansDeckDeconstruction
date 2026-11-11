@@ -9,6 +9,7 @@
 // With roundTrip on, the engine's state is serialised to JSON and parsed back before every step.
 import { loadMockup } from "./load-mockup.mjs";
 import * as E from "../../engine/js/index.mjs";
+import { fuzzRandom, fuzzAction } from "./fuzz.mjs";
 
 const plain = (x) => JSON.parse(JSON.stringify(x));
 
@@ -16,7 +17,7 @@ export function mockupRules(mock) {
   const { DATA, CONFIG, ACTIONS, BASE, TRASH, BONUS } = mock.consts;
   return E.makeRules(
     plain({
-      config: { ...CONFIG, startingActions: BASE, terms: { archive: "stack" } },
+      config: { ...CONFIG, startingActions: BASE, terms: { archive: "stack" }, bookCardsTo: "archive" },
       actions: ACTIONS,
       bonuses: BONUS,
       trash: TRASH,
@@ -153,91 +154,6 @@ function botTurn(g) {
 const botSeats = (n) => Array.from({ length: n }, (_, i) => ({ name: "Bot " + (i + 1), bot: true }));
 
 // ---------- fuzz games ----------
-function fuzzRandom(seed) {
-  let a = (seed ^ 0x5bd1e995) | 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// Picks a random action for the current seat from the engine's state (identical to the mock-up's while
-// parity holds). Lists never repeat an id: repeated ids are the protocol layer's job to reject.
-export function fuzzAction(S, R, rnd) {
-  const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
-  const sample = (arr, n) => {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-    return a.slice(0, Math.max(0, n));
-  };
-  const subset = (arr, p) => arr.filter(() => rnd() < p);
-  const addUnique = (arr, u) => (u === undefined || arr.includes(u) ? arr : [...arr, u]);
-  const kindOf = (u) => S.cards[u].kind;
-
-  if (S.phase === "draft") return { fn: "draft", args: [rnd() < 0.1 ? "Z" : pick(R.letters)] };
-  if (S.pending) {
-    const k = S.pending.seen.length - S.pending.keepN;
-    const n = rnd() < 0.15 ? k + (rnd() < 0.5 ? -1 : 1) : k;
-    return { fn: "researchChoose", args: [sample(S.pending.seen, n)] };
-  }
-  const p = S.players[S.turn];
-  const actions = p.hand.filter((u) => kindOf(u) === "action");
-  if (!actions.length || rnd() < 0.12) {
-    const lim = E.keepLimit(S, R, S.turn);
-    return { fn: "endTurn", args: [sample(p.hand, Math.floor(rnd() * (lim + 2)))] };
-  }
-  let a = pick(actions);
-  let kind = R.actions[S.cards[a].ref].kind;
-  if (rnd() < 0.05) { a = pick(p.hand); kind = pick(["conference", "article", "book", "research", "network", "organize", "draw"]); }
-  const others = p.hand.filter((u) => u !== a);
-  const sources = others.filter((u) => kindOf(u) === "source");
-  const era = (u) => R.cards[S.cards[u].ref].era;
-  const tags = (u) => { const d = R.cards[S.cards[u].ref]; return d.sub ? [d.arg, d.sub] : [d.arg]; };
-  switch (kind) {
-    case "draw":
-      return { fn: "draw", args: [a] };
-    case "organize": {
-      let t = subset([...p.hand, ...p.discard].filter((u) => kindOf(u) === "trash"), 0.7);
-      if (rnd() < 0.1) t = addUnique(t, pick(others));
-      return { fn: "organize", args: [a, t] };
-    }
-    case "research": {
-      const fixed = kindOf(a) === "action" && Number.isInteger(R.actions[S.cards[a].ref].take);
-      let disc = fixed && rnd() < 0.9 ? [] : sample(others, 1 + Math.floor(rnd() * others.length));
-      if (rnd() < 0.05) disc = addUnique(disc, a);
-      return { fn: "research", args: [a, disc, rnd() < 0.05 ? "Z" : pick(R.letters)] };
-    }
-    case "conference":
-      return { fn: "conference", args: [a, rnd() < 0.85 ? pick(sources) : pick(others)] };
-    case "article": {
-      const pairs = [];
-      for (let i = 0; i < sources.length; i++) for (let j = i + 1; j < sources.length; j++) if (era(sources[i]) === era(sources[j])) pairs.push([sources[i], sources[j]]);
-      const [s1, s2] = pairs.length && rnd() < 0.8 ? pick(pairs) : sample(others, 2);
-      const show = rnd() < 0.9 ? (rnd() < 0.5 ? s1 : s2) : pick(others);
-      return { fn: "article", args: [a, s1, s2, show] };
-    }
-    case "book": {
-      const L = pick(R.letters);
-      let h = subset(sources.filter((u) => tags(u).includes(L)), 0.85);
-      let sh = subset(S.players.flatMap((q) => q.shelf.map((e) => e.uid)).filter((u) => tags(u).includes(L)), 0.7);
-      if (rnd() < 0.08) h = addUnique(h, pick(others));
-      if (rnd() < 0.05) sh = addUnique(sh, pick(others));
-      const r = rnd();
-      const show = r < 0.85 ? pick(h) : r < 0.93 ? undefined : pick(others);
-      return { fn: "book", args: [a, h, sh, show] };
-    }
-    case "network": {
-      const disc = sample(others, Math.floor(rnd() * (others.length + 1)));
-      const up = rnd() < 0.9 ? pick(R.piles.map((pl) => pl.pile)) : pick(Object.keys(R.actions));
-      const repl = rnd() < 0.9 ? pick([...disc, ...p.discard]) : pick(others);
-      return { fn: "network", args: [a, disc, up, repl] };
-    }
-  }
-  throw new Error("unreachable");
-}
-
 const MOCK_CALL = {
   draft: (c, MS, [L]) => c.doDraft(L),
   researchChoose: (c, MS, [rej]) => c.finishResearch(MS.pending, rej),

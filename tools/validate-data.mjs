@@ -51,6 +51,7 @@ export function validateData({ config, actions, bonuses, trash, deck, market = n
   for (const k of CONFIG_NUMBERS) if (!isInt(config[k]) || config[k] < 0) err(`config.${k} must be a whole number >= 0`);
   if (!market && (!isInt(config.upgradeCopies) || config.upgradeCopies < 1)) err("config.upgradeCopies is needed when there is no market.json");
   if (config.terms !== undefined && !isStr(config.terms?.archive)) err("config.terms.archive must be a string");
+  if (config.bookCardsTo !== undefined && !["discard", "archive"].includes(config.bookCardsTo)) err('config.bookCardsTo must be "discard" or "archive"');
   if (!config.rounds || typeof config.rounds !== "object") err("config.rounds is missing");
   else for (const [k, v] of Object.entries(config.rounds)) if (!isInt(v) || v < 1) err(`config.rounds.${k} must be a whole number >= 1`);
   const bcp = config.bookCardPts || {};

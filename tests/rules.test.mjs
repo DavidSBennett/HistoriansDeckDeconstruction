@@ -142,6 +142,32 @@ test("buying a pile by an upgrade's id or an unknown id is refused", () => {
   for (const id of ["travel", "keynote2", "toString", "nope"]) assert.equal(E.doNetwork(S, R, 0, net, disc, id, disc[0]), "That upgrade is gone.", id);
 });
 
+test("a book's hand cards go to the author's discard pile; only the showcase leaves the deck", () => {
+  const S = setup();
+  // Four sources sharing thesis A, from the deck data.
+  const four = S.cards.map((c, u) => u).filter((u) => u && S.cards[u].kind === "source" && R.cards[S.cards[u].ref].arg === "A").slice(0, 4);
+  const bk = addCard(S, "action", "book");
+  const p = hand(S, [bk, ...four]);
+  const archives = Object.fromEntries(Object.entries(S.stacks).map(([L, a]) => [L, a.length]));
+  const discardBefore = p.discard.length;
+  assert.equal(E.doBook(S, R, 0, bk, four, [], four[0]), null);
+  assert.deepEqual(p.shelf.map((e) => e.uid), [four[0]], "the showcase goes on the bookshelf");
+  assert.deepEqual(p.discard.slice(-3), four.slice(1), "the other three go to the discard pile");
+  assert.equal(p.discard.length, discardBefore + 3);
+  assert.deepEqual(Object.fromEntries(Object.entries(S.stacks).map(([L, a]) => [L, a.length])), archives, "no archive changes");
+});
+
+test("an article's second source goes to the author's discard pile", () => {
+  const S = setup();
+  const byEra = {};
+  for (let u = 1; u < S.cards.length; u++) if (S.cards[u].kind === "source") (byEra[R.cards[S.cards[u].ref].era] ??= []).push(u);
+  const [s1, s2] = Object.values(byEra).find((a) => a.length >= 2);
+  const ar = addCard(S, "action", "article");
+  const p = hand(S, [ar, s1, s2]);
+  assert.equal(E.doArticle(S, R, 0, ar, s1, s2, s1), null);
+  assert.equal(p.discard.at(-1), s2);
+});
+
 test("the log calls the stacks card archives", () => {
   const S = setup();
   const draft = S.log.find((e) => e.type === "draft");

@@ -25,5 +25,8 @@ export function makeRules({ config, actions, bonuses, trash, deck, market = null
     pileById: new Map(piles.map((p) => [p.pile, p])),
     base: config.startingActions,
     archiveWord: config.terms?.archive ?? "card archive", // what the log calls a stack
+    // Where a book's hand cards (other than the showcase) go: the author's discard pile, or (the mock-up's
+    // rule) the bottom of their archives.
+    bookCardsTo: config.bookCardsTo ?? "discard",
   };
 }
