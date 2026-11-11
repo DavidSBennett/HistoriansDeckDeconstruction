@@ -24,6 +24,25 @@ Needs Node 22 or later, and PHP 8.1 or later for the PHP checks. There are no de
 
 Installing on GreenGeeks: [database/INSTALL.md](database/INSTALL.md).
 
+## Playing it locally
+
+Needs PHP 8.1+ on the PATH (the SQLite driver is loaded per command if it isn't switched on).
+
+```bash
+npm install --prefix frontend
+```
+
+```bash
+node tools/dev-backend.mjs
+```
+
+```bash
+npm run dev --prefix frontend
+```
+
+Then open http://localhost:5173 and sign in as `alice`, `bob` or `carol` (password: the name followed by
+`-dev`). The local database lives in `build/dev/`; add `--reset` to the backend command to start it afresh.
+
 GitHub Actions runs the tests, a slice of the parity check, and the PHP checks on PHP 8.1 and 8.3 on every push.
 | `npm run data:check` | Reports whether `data/` still matches the mock-up's constants. |
 | `npm run data:extract` | Regenerates `data/` from the mock-up. **This overwrites any rebalancing.** |
@@ -39,3 +58,12 @@ hard-codes them. A new deck goes in `data/decks/<id>/deck.json` with the same ca
 - `bonuses.json`, `trash.json`: passive bonuses by source type, and the trash cards.
 
 After editing, run `npm run data:validate`, then `npm run sim` to see the effect.
+
+The AI History deck is built from the Historians-Deck-Builder spreadsheet. After changing the CSV, rebuild it:
+
+```bash
+npm run deck:import -- "../Historians-Deck-Builder/AI History/deck/ai-history-deck.csv" ai-history --name "AI History"
+```
+
+It prints the chronological numbering and checks the deck before writing it. Compare decks with
+`npm run sim -- --deck ai-history-mockup`.

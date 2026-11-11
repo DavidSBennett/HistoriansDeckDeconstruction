@@ -11,6 +11,7 @@
     "data:extract": "node tools/extract-data.mjs",
     "data:check": "node tools/extract-data.mjs --check",
     "data:validate": "node tools/validate-data.mjs",
+    "deck:import": "node tools/import-deck-csv.mjs",
     "sim": "node tools/simulate.mjs",
     "sim:mockup": "node tools/mockup-sim.mjs",
     "parity": "node tools/parity.mjs",

@@ -18,8 +18,8 @@ test("fuzz games (random choices, including invalid ones) match the mock-up afte
   for (const [length, seats] of configs) for (let seed = 1; seed <= 6; seed++) fuzzGame(mock, R, seats, length, seed);
 });
 
-test("data/ still has the mock-up's deck and bonuses", () => {
-  const fromData = makeRules(loadData("ai-history"));
+test("data/ keeps the mock-up's deck (as ai-history-mockup) and bonuses", () => {
+  const fromData = makeRules(loadData("ai-history-mockup"));
   const plainTheses = (r) => Object.fromEntries(Object.entries(r.theses).map(([L, { color, ...t }]) => [L, t]));
   assert.deepEqual(fromData.cards, R.cards);
   assert.deepEqual(plainTheses(fromData), plainTheses(R));

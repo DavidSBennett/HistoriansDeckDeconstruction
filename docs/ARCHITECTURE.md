@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: build steps 1–6 done (2026-11-11); next is step 7, the React client. The original spec is [BRIEF.md](BRIEF.md); this file records what
+Status: build steps 1–7 done (2026-11-11); next is step 8, deploying to projecta.thehistorians.org. The original spec is [BRIEF.md](BRIEF.md); this file records what
 was decided since and where the mock-up's code differs from the brief.
 
 ## Decisions
@@ -14,6 +14,8 @@ was decided since and where the mock-up's code differs from the brief.
 | 2026-11-11 | **Sign in once everywhere:** a shared session cookie on `.thehistorians.org` (see Login below). |
 | 2026-11-11 | **Research is redesigned** (draw X from a card archive, no discard cost) and upgrade piles grow stronger the deeper you buy, at a fixed price (see Rules changes). The exact port comes first, so parity with the mock-up is proven before any rule changes. |
 
+| 2026-11-11 | **The AI History deck is the Historians-Deck-Builder CSV edition** (`AI History/deck/ai-history-deck.csv`), imported with `npm run deck:import`. The mock-up's deck is kept as `ai-history-mockup`. |
+
 ## Build order
 
 1. ✔ Repo setup; mock-up constants extracted to `data/`; data validator; mock-up simulator.
@@ -22,7 +24,7 @@ was decided since and where the mock-up's code differs from the brief.
 4. ✔ Protocol wrapper (turn, phase, pending choice, repeated ids), structured events, `view(state, seat)`, and hidden-information tests (see "Protocol and views" below).
 5. ✔ PHP engine plus conformance: the JS engine records test games, the PHP engine replays them and must match exactly; GitHub Actions runs both (see "The PHP engine" below). **Review stop.**
 6. ✔ Shared login, DB migrations, PHP backend (lobby, polling, actions, server-side bots), tested end to end over HTTP (see "Backend and login" below).
-7. React client, using the mock-up's layout and click flow.
+7. ✔ React client, using the mock-up's layout and click flow (see "The client" below).
 8. Deploy workflow to projecta.thehistorians.org; first migration run by hand; two-browser smoke test.
 
 ## Rules changes (step 3)
@@ -314,6 +316,62 @@ because nothing has been pushed.
 **Rule changes from now on:** change `engine/js`, run `npm test`, then port the change to `engine/php` until
 `npm run conformance` passes.
 
+## The client (step 7)
+
+`frontend/` is React 18 + Vite 5 in plain JS, with React Router 6, matching Board's versions. Two
+departures from Board:
+- **The mock-up's CSS instead of Tailwind.** `src/styles.css` is the mock-up's stylesheet, ported, with thesis
+  colours taken from the deck data.
+- **`fetch` instead of axios.** The sign-in cookie travels with every request by itself.
+
+- **Pages:**
+  - sign-in, linking to Board for registering and password resets;
+  - home: your games with "your move" markers, create a game, join by code;
+  - lobby: the join code, seats, and the host's bots, length, start and cancel;
+  - the table.
+- **The table** (`src/components/Table.jsx`) is the mock-up's `render()`, `renderDock()` and modals, driven
+  by the view from the server. Each click flow ends in one protocol message:
+  - draft;
+  - Research: click an archive, with a put-back dialog when a Map shows extra cards;
+  - Network: discards, then a pile, then the card to replace;
+  - conference;
+  - article: two sources, then the showcase;
+  - book: hand and shelf cards with a live score preview, then the showcase;
+  - Organize;
+  - end turn: keep cards, then confirm.
+- **The conference space** shows each pile's next card and the stronger one after it.
+- **The client runs the engine's own code** (`bookCheck`, `bonus`, `keepLimit`, `nextTier`, `describe`) on
+  the view, so previews and log text match the server exactly.
+- **Polling** (`src/useGame.js`): every 1.5 s while playing, with `since=` so an unchanged game costs one
+  tiny reply, and `log_from=` so only new log entries come back. The game's rules snapshot is fetched once.
+  A move answers with the new view straight away.
+- **Local development:**
+  - `node tools/dev-backend.mjs` runs the real `backend/` on PHP's built-in server with a SQLite database
+    in `build/dev/`;
+  - `npm run dev --prefix frontend` serves the client, proxying `*.php` to the dev backend;
+  - demo accounts: alice, bob and carol, each with the password `<name>-dev`;
+  - `.claude/launch.json` starts both.
+
+**Checked in the browser** (2026-11-11, against the local backend), each step going through the server:
+- sign-in, creating a game, adding bots, starting;
+- drafting, with the starting-sources reveal;
+- Organize, Attend Conference, keeping a card at the end of a turn;
+- Research under the new rule; Network buying a tier and replacing a trash card;
+- an article; a book on thesis B with the live preview, an own shelf card and a citation of a bot's shelf
+  card;
+- the bots' turns, with their redacted log lines;
+- the rules dialog, the end of a game, and the results table with the trash penalty.
+
+Found and fixed along the way:
+- the first poll sent `since=-1`, which the backend rightly rejects;
+- an "articles need one era" check crashed Network mode (there's now an error boundary, so a drawing error
+  shows a message, not a blank page);
+- selected cards were dimmed at the showcase step, as in the mock-up.
+
+**Not clicked through:** the Research put-back dialog (needs a Map in hand during Research; covered by the
+engine and protocol tests, but not tried in the browser); a game between two human players on two browsers;
+phone-width layout.
+
 ## Repository layout
 
 ```
@@ -327,7 +385,7 @@ engine/php/  authoritative port: rng, rules, engine, bots, protocol, view, canon
 backend/     PHP endpoints (users_*, dk_*), lib/db/auth/games helpers, tests/ (SQLite schema and setup)
 database/    NN_description.sql migrations, run by hand; INSTALL.md for cPanel setup
 tests/backend/  end-to-end HTTP test of the backend (npm run test:backend)
-frontend/    step 7: React 18 + Vite + Tailwind, plain JS
+frontend/    React 18 + Vite 5 client, plain JS; imports engine/js through the @engine alias
 ```
 
 ## Data files
@@ -336,6 +394,23 @@ frontend/    step 7: React 18 + Vite + Tailwind, plain JS
 - `actions.json`, `bonuses.json` and `trash.json` started as `ACTIONS`, `BONUS` and `TRASH`. Since step 3, `actions.json` also has the second-tier upgrades and the `take` numbers, and `config.json` has `terms.archive` (the word the log uses for a stack) instead of `upgradeCopies`.
 - `market.json` lists the upgrade piles: id, price, and tiers from the top down. Its order is the conference space's order.
 - `decks/<id>/deck.json` holds `{ id, name, theses, cards }`. `theses[L]` is `{ q, articles, books, color }`; `cards` keep the mock-up's fields. A game stores its deck id, so swapping decks never breaks a game in progress.
+- **Decks come from the Historians-Deck-Builder CSV.** Run
+  `npm run deck:import -- "<path>/ai-history-deck.csv" ai-history --name "AI History"`. It prints the
+  chronological order and the source-type counts, validates the deck, and writes it. Column mapping:
+  - `location` → `quote` (that's where the CSV keeps the quote);
+  - `context_tags` "Era|Stance" → `era` and `stance`;
+  - `image_url` and `description` → `image` and `imageCredit` (extra fields, unused for now);
+  - conclusion rows "Thesis X: question" → `theses[X].q`, with their article and book title lists.
+- **`num`,** the chronological number the Sequence set uses, is computed from each card's earliest
+  mentioned date. A year alone counts as the start of that year; ties keep CSV order.
+  - One judgement call: Ashby's Journal is dated "Kept 1928-1972; entry quoted June 13, 1959", so it sorts
+    by 1928, as #2.
+  - In this deck chronology follows the theses almost exactly (A ≈ 1–11, B 9–20, C 21–30, D 31–40), so
+    Sequence sets nearly always come from one thesis.
+- The CSV's `bonus` column (1 on every card) isn't used: bonuses come from the source type.
+- Simulated against the mock-up's deck (seeds 1–1,000, medium): 2 players 93.3 / 69.9 (was 90.5 / 68.5);
+  3 players 126.2 / 103.1 / 81.6; 4 players 163.6 / 138.7 / 119.1 / 94.7. Field win rates stay even;
+  A is slightly weaker in 3- and 4-player games.
 - `npm run data:validate` checks every deck; `npm run data:check` reports whether `data/` still matches the mock-up. It will stop matching once you rebalance; the parity tests use the mock-up's own constants, not `data/`.
 
 ## Open items
