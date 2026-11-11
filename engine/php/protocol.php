@@ -92,7 +92,7 @@ function messages(): array
     $m = [
         'draft' => [[chkName('stack')], static fn(&$S, $R, $seat, $a) => doDraft($S, $R, $a->stack)],
         'playDraw' => [[chkId('card')], static fn(&$S, $R, $seat, $a) => doDraw($S, $R, $seat, $a->card)],
-        'organize' => [[chkId('card'), chkIds('trash')], static fn(&$S, $R, $seat, $a) => doOrganize($S, $R, $seat, $a->card, $a->trash)],
+        'organize' => [[chkId('card'), chkIds('cards')], static fn(&$S, $R, $seat, $a) => doOrganize($S, $R, $seat, $a->card, $a->cards)],
         'research' => [
             [chkId('card'), chkName('stack'), chkIds('discard', true)],
             static fn(&$S, $R, $seat, $a) => doResearch($S, $R, $seat, $a->card, opt($a, 'discard', []), $a->stack),
@@ -111,6 +111,7 @@ function messages(): array
             [chkId('card'), chkIds('discard'), chkName('pile'), chkId('replace')],
             static fn(&$S, $R, $seat, $a) => doNetwork($S, $R, $seat, $a->card, $a->discard, $a->pile, $a->replace),
         ],
+        'buy' => [[chkIds('discard'), chkName('pile')], static fn(&$S, $R, $seat, $a) => doBuy($S, $R, $seat, $a->discard, $a->pile)],
         'endTurn' => [[chkIds('keep', true)], static fn(&$S, $R, $seat, $a) => endTurn($S, $R, opt($a, 'keep', []))],
     ];
     return $m;

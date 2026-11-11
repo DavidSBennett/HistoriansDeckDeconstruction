@@ -25,15 +25,14 @@
   "typesMin": 5,
   "typesPts": 12,
   "startCards": 5,
-  "trashPerStack": 3,
-  "trashPenalty": 1,
+  "trashPerStack": 0,
+  "trashPenalty": 0,
   "keepCards": 1,
   "startingActions": [
     "conference",
     "article",
     "book",
     "research",
-    "network",
     "organize"
   ],
   "seats": {
@@ -42,5 +41,12 @@
   },
   "terms": {
     "archive": "card archive"
+  },
+  "buying": {
+    "perTurn": 1
+  },
+  "falseLead": {
+    "articlePts": 3,
+    "bookCardPts": 2
   }
 }

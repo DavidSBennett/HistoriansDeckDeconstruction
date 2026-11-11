@@ -4,7 +4,8 @@
 // Source rows (card_identifier "archive") become cards; conclusion rows (card_identifier "conclusion") become
 // the theses. Column mapping:
 //   sequence_number -> seq      source_type -> type     location -> quote (the CSV keeps the quote there)
-//   argument -> arg             sub_argument -> sub     context_tags "Era|Stance" -> era, stance
+//   argument -> arg             sub_argument -> sub     bonus -> power (purchasing power; False Leads get 0)
+//   context_tags "Era|Stance|False Lead" -> era, stance, falseLead (the era comes first; the others in any order)
 //   image_url -> imageUrl       description -> imageCredit (extra fields; the engine ignores them)
 // --images: a folder of card pictures named <thesis letter><sequence number>, e.g. a1.jpg, c10.png (any case;
 // .jpg is preferred when there are several). Each is resized to at most 640 px and saved as
@@ -13,7 +14,7 @@
 //   conclusion title "Thesis X: question" -> theses[X].q; article_titles / book_titles split on " | "
 // `num`, the chronological number the Sequence set uses, is computed: cards are ordered by the earliest date
 // their date text mentions (a year alone counts as the start of that year), ties in CSV order. The order is
-// printed so it can be checked. The CSV's `bonus` column is not used: bonuses come from the source type.
+// printed so it can be checked. Passive bonuses come from the source type, not the CSV.
 // Thesis colours are kept from the deck being replaced, or taken from the default palette.
 import fs from "node:fs";
 import path from "node:path";
@@ -22,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import { validateData, loadData } from "./validate-data.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
+const FALSE_LEAD = "false lead";
 const PALETTE = { A: "#7b2d2d", B: "#2d587b", C: "#2f7a52", D: "#7d5a2c", E: "#5b3f7a", F: "#2f6f73" };
 
 /** RFC 4180 CSV: quoted fields, "" escapes, commas and newlines inside quotes. Returns rows of strings. */
@@ -86,7 +88,12 @@ export function buildDeck(csvText, { id, name, colors = {} }) {
 
   const sources = rows.filter((r) => col(r, "card_identifier") === "archive");
   const cards = sources.map((r, row) => {
-    const [era, stance = ""] = col(r, "context_tags").split("|").map((s) => s.trim());
+    const [era, ...tags] = col(r, "context_tags").split("|").map((s) => s.trim()).filter(Boolean);
+    const falseLead = tags.some((t) => t.toLowerCase() === FALSE_LEAD);
+    const stance = tags.filter((t) => t.toLowerCase() !== FALSE_LEAD).join(", ");
+    const bonusText = col(r, "bonus");
+    const power = falseLead ? 0 : bonusText === "" ? 1 : Number(bonusText);
+    if (!Number.isInteger(power) || power < 0) throw new Error(`Card "${col(r, "title")}": bonus "${bonusText}" is not a whole number.`);
     return {
       seq: col(r, "sequence_number"),
       date: col(r, "date"),
@@ -103,6 +110,8 @@ export function buildDeck(csvText, { id, name, colors = {} }) {
       stance,
       quote: col(r, "location"),
       num: 0,
+      power,
+      falseLead,
       image: "",
       imageUrl: col(r, "image_url"),
       imageCredit: col(r, "description"),

@@ -57,6 +57,23 @@ function isTrash(array $S, int $u): bool
 {
     return $S['cards'][$u]['kind'] === 'trash';
 }
+/** A False Lead: a source marked falseLead, under rules that have False Leads (config.falseLead). */
+function isFalseLead(array $S, array $R, int $u): bool
+{
+    return !empty($R['config']['falseLead']) && $S['cards'][$u]['kind'] === 'source' && !empty($R['cards'][$S['cards'][$u]['ref']]['falseLead']);
+}
+/** Purchasing power: an action card's or a source's power (1 if a source has none); trash and False Leads have none. */
+function powerOf(array $S, array $R, int $u): int
+{
+    $c = $S['cards'][$u];
+    if ($c['kind'] === 'action') {
+        return $R['actions'][$c['ref']]['power'] ?? 0;
+    }
+    if ($c['kind'] !== 'source' || isFalseLead($S, $R, $u)) {
+        return 0;
+    }
+    return $R['cards'][$c['ref']]['power'] ?? 1;
+}
 function tagsOf(array $S, array $R, int $u): array
 {
     $d = src($S, $R, $u);
@@ -80,20 +97,35 @@ function bonus(array $S, array $R, int $seat, string $type): int
     $p = $S['players'][$seat];
     $n = 0;
     foreach ($p['hand'] as $u) {
-        if (isSource($S, $u) && src($S, $R, $u)['type'] === $type) {
+        if (isSource($S, $u) && src($S, $R, $u)['type'] === $type && !isFalseLead($S, $R, $u)) {
             $n++;
         }
     }
     foreach ($p['shelf'] as $e) {
-        if (src($S, $R, $e['uid'])['type'] === $type) {
+        if (src($S, $R, $e['uid'])['type'] === $type && !isFalseLead($S, $R, $e['uid'])) {
             $n++;
         }
     }
     return $R['bonuses'][$type]['amt'] * $n;
 }
+/** Total of one bookshelf effect from the False Leads on a player's bookshelf. */
+function shelfEffect(array $S, array $R, int $seat, string $key): int
+{
+    $t = 0;
+    foreach ($S['players'][$seat]['shelf'] as $e) {
+        if (isFalseLead($S, $R, $e['uid'])) {
+            $t += $R['falseLeads'][src($S, $R, $e['uid'])['type']][$key] ?? 0;
+        }
+    }
+    return $t;
+}
 function keepLimit(array $S, array $R, int $seat): int
 {
-    return $R['config']['keepCards'] ? $R['config']['keepCards'] + bonus($S, $R, $seat, 'Diary') : 0;
+    return $R['config']['keepCards'] ? $R['config']['keepCards'] + bonus($S, $R, $seat, 'Diary') + shelfEffect($S, $R, $seat, 'keep') : 0;
+}
+function handLimit(array $S, array $R, int $seat): int
+{
+    return $R['config']['handSize'] + shelfEffect($S, $R, $seat, 'hand');
 }
 function books(array $p): int
 {
@@ -156,6 +188,10 @@ function newGame(array $R, array $seats, string $length, int $seed): array
     }
     foreach ($R['piles'] as $pl) {
         $S['market'][$pl['pile']] = count($pl['tiers']);
+    }
+    if (!empty($R['config']['buying'])) {
+        $S['returned'] = [];
+        $S['bought'] = 0;
     }
     foreach (array_values($seats) as $i => $s) {
         $deck = [];
@@ -231,6 +267,9 @@ function doOrganize(array &$S, array $R, int $seat, $a, array $uids)
     if (!actCheck($S, $R, $seat, $a, 'organize')) {
         return 'Not an organize card.';
     }
+    if (!empty(def($S, $R, $a)['returns'])) {
+        return organizeReturn($S, $R, $seat, $a, $uids);
+    }
     if (!count($uids)) {
         return 'Choose at least one trash card.';
     }
@@ -247,6 +286,46 @@ function doOrganize(array &$S, array $R, int $seat, $a, array $uids)
         }
     }
     logEv($S, ['type' => 'organize', 'seat' => $seat, 'n' => count($uids), 'cards' => array_values($uids)]);
+    return null;
+}
+
+/** Organize under the current rules: cards go back to their archive or pile; basic cards and trash leave the game. */
+function organizeReturn(array &$S, array $R, int $seat, $a, array $uids)
+{
+    if (!count($uids)) {
+        return 'Choose at least one card to return.';
+    }
+    if (has($uids, $a)) {
+        return 'Organize cannot return itself.';
+    }
+    $p = $S['players'][$seat];
+    foreach ($uids as $u) {
+        if (!has($p['hand'], $u) && !has($p['discard'], $u)) {
+            return 'Only cards in your hand or discard pile.';
+        }
+    }
+    playCard($S, $seat, $a);
+    $archives = [];
+    $piles = [];
+    $removed = 0;
+    foreach ($uids as $u) {
+        if (take($S['players'][$seat]['hand'], $u) === null) {
+            take($S['players'][$seat]['discard'], $u);
+        }
+        $c = $S['cards'][$u];
+        if ($c['kind'] === 'source') {
+            $L = $R['cards'][$c['ref']]['arg'];
+            $S['stacks'][$L][] = $u;
+            $archives[$L] = ($archives[$L] ?? 0) + 1;
+        } elseif ($c['kind'] === 'action' && isset($R['pileOfTier'][$c['ref']]) && array_key_exists('returned', $S)) {
+            $pile = $R['pileOfTier'][$c['ref']];
+            $S['returned'][$pile][] = $c['ref'];
+            $piles[] = $pile;
+        } else {
+            $removed++;
+        }
+    }
+    logEv($S, ['type' => 'organize', 'seat' => $seat, 'n' => count($uids), 'archives' => $archives, 'piles' => $piles, 'removed' => $removed, 'cards' => array_values($uids)]);
     return null;
 }
 
@@ -282,7 +361,7 @@ function doResearch(array &$S, array $R, int $seat, $a, array $disc, $L, ?callab
     foreach ($disc as $u) {
         $S['players'][$seat]['discard'][] = take($S['players'][$seat]['hand'], $u);
     }
-    $want = $fixed ? $d['take'] : count($disc) + ($d['bonus'] ?? 0);
+    $want = ($fixed ? $d['take'] : count($disc) + ($d['bonus'] ?? 0)) + shelfEffect($S, $R, $seat, 'take');
     $n = min($want + $look, count($S['stacks'][$L]));
     $seen = array_slice($S['stacks'][$L], 0, $n);
     $S['stacks'][$L] = array_slice($S['stacks'][$L], $n);
@@ -335,8 +414,11 @@ function doConference(array &$S, array $R, int $seat, $a, $s)
     if (!has($S['players'][$seat]['hand'], $s) || !isSource($S, $s)) {
         return 'Choose one source.';
     }
+    if (isFalseLead($S, $R, $s)) {
+        return 'A False Lead cannot be presented as evidence.';
+    }
     $d = src($S, $R, $s);
-    $pts = ((def($S, $R, $a)['pts'] ?? 0) ?: $R['config']['paperPts']) + bonus($S, $R, $seat, 'Speech');
+    $pts = ((def($S, $R, $a)['pts'] ?? 0) ?: $R['config']['paperPts']) + bonus($S, $R, $seat, 'Speech') + shelfEffect($S, $R, $seat, 'paper');
     playCard($S, $seat, $a);
     $S['players'][$seat]['discard'][] = take($S['players'][$seat]['hand'], $s);
     $S['players'][$seat]['prestige'] += $pts;
@@ -349,6 +431,13 @@ function sameEra(array $S, array $R, int $a, int $b): bool
 {
     return src($S, $R, $a)['era'] === src($S, $R, $b)['era'];
 }
+/** Two sources make an article if they share an era, or if both are False Leads (any eras). */
+function articlePair(array $S, array $R, int $a, int $b): bool
+{
+    $fa = isFalseLead($S, $R, $a);
+    $fb = isFalseLead($S, $R, $b);
+    return $fa || $fb ? $fa && $fb : sameEra($S, $R, $a, $b);
+}
 
 function doArticle(array &$S, array $R, int $seat, $a, $s1, $s2, $show)
 {
@@ -359,13 +448,14 @@ function doArticle(array &$S, array $R, int $seat, $a, $s1, $s2, $show)
     if (!has($hand, $s1) || !has($hand, $s2) || $s1 === $s2 || !isSource($S, $s1) || !isSource($S, $s2)) {
         return 'Choose two sources.';
     }
-    if (!sameEra($S, $R, $s1, $s2)) {
-        return 'The two sources must share an era.';
+    if (!articlePair($S, $R, $s1, $s2)) {
+        return isFalseLead($S, $R, $s1) || isFalseLead($S, $R, $s2) ? 'A False Lead can only be published with another False Lead.' : 'The two sources must share an era.';
     }
     if ($show !== $s1 && $show !== $s2) {
         return 'Choose which card to showcase.';
     }
-    $pts = $R['config']['articlePts'] + (def($S, $R, $a)['pts'] ?? 0) + bonus($S, $R, $seat, 'Report');
+    $fl = isFalseLead($S, $R, $s1) ? $R['config']['falseLead']['articlePts'] : 0;
+    $pts = $R['config']['articlePts'] + (def($S, $R, $a)['pts'] ?? 0) + bonus($S, $R, $seat, 'Report') + shelfEffect($S, $R, $seat, 'article') + $fl;
     playCard($S, $seat, $a);
     take($S['players'][$seat]['hand'], $s1);
     take($S['players'][$seat]['hand'], $s2);
@@ -378,7 +468,11 @@ function doArticle(array &$S, array $R, int $seat, $a, $s1, $s2, $show)
     $tl = $R['theses'][$L]['articles'];
     $title = $tl[$S['ti'][$L]['a']++ % count($tl)];
     $S['players'][$seat]['cv'][] = ['type' => 'article', 'title' => $title, 'letter' => $L, 'pts' => $pts];
-    logEv($S, ['type' => 'article', 'seat' => $seat, 'title' => $title, 'pts' => $pts, 'show' => $sc, 'other' => $other]);
+    $ev = ['type' => 'article', 'seat' => $seat, 'title' => $title, 'pts' => $pts, 'show' => $sc, 'other' => $other];
+    if ($fl) {
+        $ev['falseLead'] = true;
+    }
+    logEv($S, $ev);
     return null;
 }
 
@@ -444,7 +538,12 @@ function bookCheck(array $S, array $R, int $seat, array $ad, array $handUids, ar
     if (count($handUids) < min($R['config']['bookMinFromHand'], $min)) {
         return ['ok' => false, 'msg' => 'At least ' . $R['config']['bookMinFromHand'] . ' cards must come from your hand.'];
     }
-    $ok = filt($R['letters'], static function ($L) use ($S, $R, $all) {
+    // Either every card is a False Lead (any theses), or none is and they share a thesis letter.
+    $fls = count(filt($all, static fn($u) => isFalseLead($S, $R, $u)));
+    if ($fls && $fls < $n) {
+        return ['ok' => false, 'msg' => 'False Leads can only be published with other False Leads.'];
+    }
+    $ok = $fls ? $R['letters'] : filt($R['letters'], static function ($L) use ($S, $R, $all) {
         foreach ($all as $u) {
             if (!in_array($L, tagsOf($S, $R, $u), true)) {
                 return false;
@@ -458,14 +557,15 @@ function bookCheck(array $S, array $R, int $seat, array $ad, array $handUids, ar
     $argCount = static fn($L) => count(filt($all, static fn($u) => src($S, $R, $u)['arg'] === $L));
     $ok = v8sort($ok, static fn($x, $y) => $argCount($y) - $argCount($x));
     $sets = bookSets($R, array_map(static fn($u) => src($S, $R, $u), $all));
-    $base = bookCardPts($R, $n) + $R['config']['bookBonus'] + ($ad['pts'] ?? 0) + bonus($S, $R, $seat, 'Photograph');
+    $flPts = $fls ? $fls * $R['config']['falseLead']['bookCardPts'] : 0;
+    $base = bookCardPts($R, $n) + $R['config']['bookBonus'] + ($ad['pts'] ?? 0) + bonus($S, $R, $seat, 'Photograph') + shelfEffect($S, $R, $seat, 'book') + $flPts;
     $pts = $base + array_sum(array_map(static fn($x) => $x['pts'], $sets));
     $sx = $sets
         ? ' Sets: ' . implode(', ', array_map(static fn($x) => $x['name'] . ' (' . $x['why'] . ') +' . $x['pts'], $sets)) . '.'
         : ' No sets yet.';
     return [
-        'ok' => true, 'letter' => $ok[0], 'pts' => $pts, 'sets' => $sets, 'ents' => $ents, 'n' => $n,
-        'msg' => "$n cards on thesis {$ok[0]}: $base base" . ($sets ? ' + ' . ($pts - $base) . ' in sets' : '') . " = $pts prestige." . $sx,
+        'ok' => true, 'letter' => $ok[0], 'pts' => $pts, 'sets' => $sets, 'ents' => $ents, 'n' => $n, 'falseLead' => $fls > 0,
+        'msg' => $n . ($fls ? ' False Leads' : " cards on thesis {$ok[0]}") . ": $base base" . ($sets ? ' + ' . ($pts - $base) . ' in sets' : '') . " = $pts prestige." . $sx,
     ];
 }
 
@@ -501,7 +601,7 @@ function doBook(array &$S, array $R, int $seat, $a, array $handUids, array $shel
     foreach ($r['ents'] as $f) {
         $S['players'][$f['owner']]['shelf'][$f['k']]['usedBy'][] = $seat;
         if ($f['owner'] !== $seat) {
-            $S['players'][$f['owner']]['prestige'] += $R['config']['citePts'] + bonus($S, $R, $f['owner'], 'Newspaper');
+            $S['players'][$f['owner']]['prestige'] += $R['config']['citePts'] + bonus($S, $R, $f['owner'], 'Newspaper') + shelfEffect($S, $R, $f['owner'], 'cite');
             $S['players'][$f['owner']]['cites']++;
             $cited[] = $f['owner'];
         }
@@ -510,26 +610,102 @@ function doBook(array &$S, array $R, int $seat, $a, array $handUids, array $shel
     $tl = $R['theses'][$r['letter']]['books'];
     $title = $tl[$S['ti'][$r['letter']]['b']++ % count($tl)];
     $S['players'][$seat]['cv'][] = ['type' => 'book', 'title' => $title, 'letter' => $r['letter'], 'pts' => $r['pts'], 'n' => $r['n']];
-    logEv($S, [
+    $ev = [
         'type' => 'book', 'seat' => $seat, 'title' => $title, 'n' => $r['n'], 'L' => $r['letter'], 'pts' => $r['pts'],
         'sets' => array_map(static fn($x) => $x['name'], $r['sets']), 'show' => $showUid ?: null, 'cited' => $cited,
         'hand' => array_values($handUids), 'shelf' => array_values($shelfUids),
-    ]);
+    ];
+    if ($r['falseLead']) {
+        $ev['falseLead'] = true;
+    }
+    logEv($S, $ev);
     return null;
 }
 
-/** The tier the next buyer of a pile gets, or null if the pile is empty. */
+/** The tier the next buyer of a pile gets (a returned upgrade first, the last returned first), or null if empty. */
 function nextTier(array $S, array $R, $pileId)
 {
     $pl = is_string($pileId) ? ($R['pileById'][$pileId] ?? null) : null;
-    $left = $pl ? ($S['market'][$pileId] ?? 0) : 0;
+    if (!$pl) {
+        return null;
+    }
+    $back = $S['returned'][$pileId] ?? [];
+    if (count($back)) {
+        return $back[count($back) - 1];
+    }
+    $left = $S['market'][$pileId] ?? 0;
     return $left ? $pl['tiers'][count($pl['tiers']) - $left] : null;
+}
+function pileLeft(array $S, $pileId): int
+{
+    return ($S['market'][$pileId] ?? 0) + count($S['returned'][$pileId] ?? []);
+}
+/** Purchasing power of a set of discards: their power, network cards held, Letters and False Lead effects. */
+function buyPower(array $S, array $R, int $seat, array $disc): int
+{
+    $t = 0;
+    foreach ($disc as $u) {
+        $t += powerOf($S, $R, $u);
+    }
+    foreach ($S['players'][$seat]['hand'] as $u) {
+        if (kindOf($S, $u) === 'action' && def($S, $R, $u)['kind'] === 'network') {
+            $t += def($S, $R, $u)['bonus'] ?? 0;
+        }
+    }
+    return $t + bonus($S, $R, $seat, 'Letter') + shelfEffect($S, $R, $seat, 'power');
+}
+function buysLeft(array $S, array $R, int $seat): int
+{
+    return !empty($R['config']['buying']) ? $R['config']['buying']['perTurn'] + shelfEffect($S, $R, $seat, 'buys') - ($S['bought'] ?? 0) : 0;
+}
+
+/** Buying (the current rules): discard cards worth at least a pile's price; the upgrade goes to the discard pile. */
+function doBuy(array &$S, array $R, int $seat, array $disc, $pileId)
+{
+    if (empty($R['config']['buying'])) {
+        return 'There is no buying in these rules.';
+    }
+    if (buysLeft($S, $R, $seat) < 1) {
+        return 'You have already bought this turn.';
+    }
+    $pl = is_string($pileId) ? ($R['pileById'][$pileId] ?? null) : null;
+    if (!$pl || !pileLeft($S, $pileId)) {
+        return 'That upgrade is gone.';
+    }
+    if (!count($disc)) {
+        return 'Discard at least one card.';
+    }
+    foreach ($disc as $u) {
+        if (!has($S['players'][$seat]['hand'], $u)) {
+            return 'Bad discard.';
+        }
+    }
+    $power = buyPower($S, $R, $seat, $disc);
+    if ($power < $pl['value']) {
+        return "Those cards are worth $power; that upgrade costs {$pl['value']}.";
+    }
+    $tier = nextTier($S, $R, $pileId);
+    if (count($S['returned'][$pileId] ?? [])) {
+        array_pop($S['returned'][$pileId]);
+    } else {
+        $S['market'][$pileId]--;
+    }
+    foreach ($disc as $u) {
+        $S['players'][$seat]['discard'][] = take($S['players'][$seat]['hand'], $u);
+    }
+    $S['players'][$seat]['discard'][] = mk($S, 'action', $tier);
+    $S['bought']++;
+    logEv($S, ['type' => 'buy', 'seat' => $seat, 'n' => count($disc), 'power' => $power, 'pile' => $pileId, 'up' => $tier, 'disc' => array_values($disc)]);
+    return null;
 }
 
 function doNetwork(array &$S, array $R, int $seat, $a, array $disc, $pileId, $repl)
 {
     if (!actCheck($S, $R, $seat, $a, 'network')) {
         return 'Not a network card.';
+    }
+    if (!empty($R['config']['buying'])) {
+        return 'There is no Network action in these rules: buy instead.';
     }
     $pl = is_string($pileId) ? ($R['pileById'][$pileId] ?? null) : null;
     if (!$pl || empty($S['market'][$pileId])) {
@@ -587,7 +763,10 @@ function endTurn(array &$S, array $R, array $keepUids)
     $kn = count($keep);
     $S['players'][$seat]['hand'] = $keep;
     $S['players'][$seat]['play'] = [];
-    draw($S, $seat, max(0, $R['config']['handSize'] - $kn));
+    draw($S, $seat, max(0, handLimit($S, $R, $seat) - $kn));
+    if (!empty($R['config']['buying'])) {
+        $S['bought'] = 0;
+    }
     logEv($S, ['type' => 'endTurn', 'seat' => $seat, 'kept' => $kn]);
     $S['turn'] = ($S['turn'] + 1) % count($S['players']);
     if ($S['turn'] === 0) {

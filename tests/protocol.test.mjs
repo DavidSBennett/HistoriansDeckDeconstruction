@@ -83,11 +83,11 @@ test("repeated ids are refused for every list field (the mock-up would have coun
   const S = humanFirst(8);
   const hand = S.players[0].hand;
   const cases = [
-    { type: "organize", card: actionCard(S, "organize"), trash: [hand[0], hand[0]] },
+    { type: "organize", card: actionCard(S, "organize"), cards: [hand[0], hand[0]] },
     { type: "research", card: actionCard(S, "research"), stack: "A", discard: [hand[0], hand[0]] },
     { type: "book", card: actionCard(S, "book"), hand: [hand[0], hand[0], hand[1], hand[1]] },
     { type: "book", card: actionCard(S, "book"), hand: [hand[0], hand[1]], shelf: [5, 5] },
-    { type: "network", card: actionCard(S, "network"), discard: [hand[0], hand[0], hand[0]], pile: "press", replace: hand[0] },
+    { type: "buy", discard: [hand[0], hand[0], hand[0]], pile: "press" },
     { type: "article", card: actionCard(S, "article"), sources: [hand[0], hand[0]], showcase: hand[0] },
     { type: "endTurn", keep: [hand[0], hand[0]] },
   ];
@@ -101,6 +101,7 @@ test("malformed messages are refused with a reason, never thrown", () => {
     { type: "playDraw" }, { type: "playDraw", card: "12" }, { type: "playDraw", card: 1.5 }, { type: "playDraw", card: -1 },
     { type: "conference", card: 1 }, { type: "article", card: 1, sources: [1], showcase: 1 },
     { type: "network", card: 1, discard: [1], pile: "", replace: 1 }, { type: "network", card: 1, discard: [1], pile: "x".repeat(41), replace: 1 },
+    { type: "buy", discard: [1], pile: "" }, { type: "buy", discard: 1, pile: "press" }, { type: "buy", pile: "press" },
     { type: "endTurn", keep: "all" }, { type: "endTurn", keep: Array.from({ length: 101 }, (_, i) => i + 1) },
     { type: "research", card: 1, stack: {} }, { type: "book", card: 1, hand: [1, 2], showcase: "x" },
   ];
@@ -146,12 +147,14 @@ test("a game played through the protocol matches the same choices made directly 
         organize: (a) => E.doOrganize(B, R, B.turn, ...a), research: (a) => E.doResearch(B, R, B.turn, ...a),
         conference: (a) => E.doConference(B, R, B.turn, ...a), article: (a) => E.doArticle(B, R, B.turn, ...a),
         book: (a) => E.doBook(B, R, B.turn, ...a), network: (a) => E.doNetwork(B, R, B.turn, ...a),
+        buy: (a) => E.doBuy(B, R, B.turn, ...a),
       };
       const msgOf = { draft: (a) => ({ type: "draft", stack: a[0] }), researchChoose: (a) => ({ type: "researchChoose", putBack: a[0] }),
         endTurn: (a) => ({ type: "endTurn", keep: a[0] }), draw: (a) => ({ type: "playDraw", card: a[0] }),
-        organize: (a) => ({ type: "organize", card: a[0], trash: a[1] }), research: (a) => ({ type: "research", card: a[0], discard: a[1], stack: a[2] }),
+        organize: (a) => ({ type: "organize", card: a[0], cards: a[1] }), research: (a) => ({ type: "research", card: a[0], discard: a[1], stack: a[2] }),
         conference: (a) => ({ type: "conference", card: a[0], source: a[1] }), article: (a) => ({ type: "article", card: a[0], sources: [a[1], a[2]], showcase: a[3] }),
-        book: (a) => ({ type: "book", card: a[0], hand: a[1], shelf: a[2], showcase: a[3] }), network: (a) => ({ type: "network", card: a[0], discard: a[1], pile: a[2], replace: a[3] }) };
+        book: (a) => ({ type: "book", card: a[0], hand: a[1], shelf: a[2], showcase: a[3] }), network: (a) => ({ type: "network", card: a[0], discard: a[1], pile: a[2], replace: a[3] }),
+        buy: (a) => ({ type: "buy", discard: a[0], pile: a[1] }) };
       let acts = 0;
       while (!B.over) {
         let a = fuzzAction(B, R, rndA);

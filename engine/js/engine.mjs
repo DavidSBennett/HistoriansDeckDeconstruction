@@ -21,6 +21,15 @@ export const def = (S, R, uid) => R.actions[S.cards[uid].ref];
 export const src = (S, R, uid) => R.cards[S.cards[uid].ref];
 export const isSource = (S, uid) => S.cards[uid].kind === "source";
 export const isTrash = (S, uid) => S.cards[uid].kind === "trash";
+// A False Lead: a source marked falseLead, under rules that have False Leads (config.falseLead).
+export const isFalseLead = (S, R, uid) => !!R.config.falseLead && S.cards[uid].kind === "source" && !!R.cards[S.cards[uid].ref].falseLead;
+// Purchasing power: an action card's or a source's `power` (1 if a source has none); trash and False Leads have none.
+export function powerOf(S, R, uid) {
+  const c = S.cards[uid];
+  if (c.kind === "action") return R.actions[c.ref].power ?? 0;
+  if (c.kind !== "source" || isFalseLead(S, R, uid)) return 0;
+  return R.cards[c.ref].power ?? 1;
+}
 export function tagsOf(S, R, uid) {
   const d = src(S, R, uid);
   return d.sub ? [d.arg, d.sub] : [d.arg];
@@ -50,16 +59,22 @@ export const trashCount = (S, seat) => {
   const p = S.players[seat];
   return [...p.deck, ...p.hand, ...p.discard, ...p.play].filter((u) => isTrash(S, u)).length;
 };
-// Passive bonus total for one source type: cards of that type in hand plus on the bookshelf.
+// Passive bonus total for one source type: cards of that type in hand plus on the bookshelf. False Leads give
+// no passive bonus; they have their own bookshelf effects (shelfEffect).
 export function bonus(S, R, seat, type) {
   const p = S.players[seat];
-  return (
-    R.bonuses[type].amt *
-    (p.hand.filter((u) => isSource(S, u) && src(S, R, u).type === type).length +
-      p.shelf.filter((e) => src(S, R, e.uid).type === type).length)
-  );
+  const counts = (u) => src(S, R, u).type === type && !isFalseLead(S, R, u);
+  return R.bonuses[type].amt * (p.hand.filter((u) => isSource(S, u) && counts(u)).length + p.shelf.filter((e) => counts(e.uid)).length);
 }
-export const keepLimit = (S, R, seat) => (R.config.keepCards ? R.config.keepCards + bonus(S, R, seat, "Diary") : 0);
+// Total of one bookshelf effect (falseLeads.json: hand, take, power, paper, article, book, cite, buys, keep)
+// from the False Leads on a player's bookshelf.
+export function shelfEffect(S, R, seat, key) {
+  let t = 0;
+  for (const e of S.players[seat].shelf) if (isFalseLead(S, R, e.uid)) t += R.falseLeads[src(S, R, e.uid).type]?.[key] || 0;
+  return t;
+}
+export const keepLimit = (S, R, seat) => (R.config.keepCards ? R.config.keepCards + bonus(S, R, seat, "Diary") + shelfEffect(S, R, seat, "keep") : 0);
+export const handLimit = (S, R, seat) => R.config.handSize + shelfEffect(S, R, seat, "hand");
 export const books = (p) => p.cv.filter((x) => x.type === "book").length;
 export const allSources = (S, p) => [...p.deck, ...p.hand, ...p.discard].filter((u) => isSource(S, u));
 export function findShelf(S, uid) {
@@ -108,6 +123,10 @@ export function newGame(R, seats, length, seed) {
     S.ti[L] = { a: 0, b: 0 };
   }
   for (const pl of R.piles) S.market[pl.pile] = pl.tiers.length;
+  if (R.config.buying) {
+    S.returned = {}; // upgrades handed back by Organize, per pile; the last one is the next sold
+    S.bought = 0; // purchases made this turn
+  }
   seats.forEach((s, i) => {
     S.players.push({
       i, name: s.name, bot: !!s.bot,
@@ -166,12 +185,42 @@ export function doDraw(S, R, seat, aUid) {
 export function doOrganize(S, R, seat, aUid, uids) {
   const p = S.players[seat];
   if (!actCheck(S, R, p, aUid, "organize")) return "Not an organize card.";
+  if (def(S, R, aUid).returns) return organizeReturn(S, R, seat, aUid, uids);
   if (!uids.length) return "Choose at least one trash card.";
   const found = (u) => p.hand.includes(u) || p.discard.includes(u);
   if (uids.some((u) => !found(u) || !isTrash(S, u))) return "Only trash cards in your hand or discard pile.";
   playCard(p, aUid);
   for (const u of uids) take(p.hand, u) ?? take(p.discard, u);
   log(S, { type: "organize", seat, n: uids.length, cards: uids.slice() });
+  return null;
+}
+
+// Organize under the current rules: any cards from hand or discard pile go back where they came from. A source
+// goes to the bottom of its card archive, an upgrade back on top of its pile in the conference space; basic
+// cards and trash leave the game.
+function organizeReturn(S, R, seat, aUid, uids) {
+  const p = S.players[seat];
+  if (!uids.length) return "Choose at least one card to return.";
+  if (uids.includes(aUid)) return "Organize cannot return itself.";
+  if (uids.some((u) => !p.hand.includes(u) && !p.discard.includes(u))) return "Only cards in your hand or discard pile.";
+  playCard(p, aUid);
+  const archives = {}, piles = [];
+  let removed = 0;
+  for (const u of uids) {
+    take(p.hand, u) ?? take(p.discard, u);
+    const c = S.cards[u];
+    if (c.kind === "source") {
+      const L = R.cards[c.ref].arg;
+      S.stacks[L].push(u);
+      archives[L] = (archives[L] || 0) + 1;
+    } else if (c.kind === "action" && R.pileOfTier.has(c.ref) && S.returned) {
+      const pile = R.pileOfTier.get(c.ref);
+      if (!S.returned[pile]) S.returned[pile] = [];
+      S.returned[pile].push(c.ref);
+      piles.push(pile);
+    } else removed++;
+  }
+  log(S, { type: "organize", seat, n: uids.length, archives, piles, removed, cards: uids.slice() });
   return null;
 }
 
@@ -197,7 +246,7 @@ export function doResearch(S, R, seat, aUid, disc, L, chooser) {
   const look = bonus(S, R, seat, "Map") + (d.look || 0);
   playCard(p, aUid);
   for (const u of disc) p.discard.push(take(p.hand, u));
-  const want = fixed ? d.take : disc.length + (d.bonus || 0);
+  const want = (fixed ? d.take : disc.length + (d.bonus || 0)) + shelfEffect(S, R, seat, "take");
   const seen = S.stacks[L].splice(0, Math.min(want + look, S.stacks[L].length));
   const pend = { seat, seen, keepN: Math.min(want, seen.length), toHand: !!d.toHand, L, n: disc.length };
   if (seen.length <= pend.keepN) return finishResearch(S, R, pend, []);
@@ -227,8 +276,9 @@ export function doConference(S, R, seat, aUid, sUid) {
   const p = S.players[seat];
   if (!actCheck(S, R, p, aUid, "conference")) return "Not a conference card.";
   if (!p.hand.includes(sUid) || !isSource(S, sUid)) return "Choose one source.";
+  if (isFalseLead(S, R, sUid)) return "A False Lead cannot be presented as evidence.";
   const d = src(S, R, sUid);
-  const pts = (def(S, R, aUid).pts || R.config.paperPts) + bonus(S, R, seat, "Speech");
+  const pts = (def(S, R, aUid).pts || R.config.paperPts) + bonus(S, R, seat, "Speech") + shelfEffect(S, R, seat, "paper");
   playCard(p, aUid);
   p.discard.push(take(p.hand, sUid));
   p.prestige += pts;
@@ -238,14 +288,22 @@ export function doConference(S, R, seat, aUid, sUid) {
 }
 
 export const sameEra = (S, R, a, b) => src(S, R, a).era === src(S, R, b).era;
+// Two sources can make an article if they share an era, or if both are False Leads (from any era). A False Lead
+// never pairs with an ordinary source.
+export function articlePair(S, R, a, b) {
+  const fa = isFalseLead(S, R, a), fb = isFalseLead(S, R, b);
+  return fa || fb ? fa && fb : sameEra(S, R, a, b);
+}
 
 export function doArticle(S, R, seat, aUid, s1, s2, show) {
   const p = S.players[seat];
   if (!actCheck(S, R, p, aUid, "article")) return "Not an article card.";
   if (!p.hand.includes(s1) || !p.hand.includes(s2) || s1 === s2 || !isSource(S, s1) || !isSource(S, s2)) return "Choose two sources.";
-  if (!sameEra(S, R, s1, s2)) return "The two sources must share an era.";
+  if (!articlePair(S, R, s1, s2))
+    return isFalseLead(S, R, s1) || isFalseLead(S, R, s2) ? "A False Lead can only be published with another False Lead." : "The two sources must share an era.";
   if (show !== s1 && show !== s2) return "Choose which card to showcase.";
-  const pts = R.config.articlePts + (def(S, R, aUid).pts || 0) + bonus(S, R, seat, "Report");
+  const fl = isFalseLead(S, R, s1) ? R.config.falseLead.articlePts : 0;
+  const pts = R.config.articlePts + (def(S, R, aUid).pts || 0) + bonus(S, R, seat, "Report") + shelfEffect(S, R, seat, "article") + fl;
   playCard(p, aUid);
   take(p.hand, s1);
   take(p.hand, s2);
@@ -258,7 +316,7 @@ export function doArticle(S, R, seat, aUid, s1, s2, show) {
   const tl = R.theses[L].articles;
   const title = tl[S.ti[L].a++ % tl.length];
   p.cv.push({ type: "article", title, letter: L, pts });
-  log(S, { type: "article", seat, title, pts, show: sc, other });
+  log(S, { type: "article", seat, title, pts, show: sc, other, ...(fl ? { falseLead: true } : {}) });
   return null;
 }
 
@@ -303,17 +361,21 @@ export function bookCheck(S, R, seat, actionDef, handUids, shelfUids) {
   if (n < min) return { ok: false, msg: n + " of " + min + " cards chosen." };
   if (handUids.length < Math.min(R.config.bookMinFromHand, min))
     return { ok: false, msg: "At least " + R.config.bookMinFromHand + " cards must come from your hand." };
-  const ok = R.letters.filter((L) => all.every((u) => tagsOf(S, R, u).includes(L)));
+  // Either every card is a False Lead (any theses), or none is and they share a thesis letter.
+  const fls = all.filter((u) => isFalseLead(S, R, u)).length;
+  if (fls && fls < n) return { ok: false, msg: "False Leads can only be published with other False Leads." };
+  const ok = fls ? R.letters.slice() : R.letters.filter((L) => all.every((u) => tagsOf(S, R, u).includes(L)));
   if (!ok.length) return { ok: false, msg: "The cards do not share a thesis letter." };
   const argCount = (L) => all.filter((u) => src(S, R, u).arg === L).length;
   ok.sort((x, y) => argCount(y) - argCount(x));
   const sets = bookSets(R, all.map((u) => src(S, R, u)));
-  const base = bookCardPts(R, n) + R.config.bookBonus + (actionDef.pts || 0) + bonus(S, R, seat, "Photograph");
+  const flPts = fls ? fls * R.config.falseLead.bookCardPts : 0;
+  const base = bookCardPts(R, n) + R.config.bookBonus + (actionDef.pts || 0) + bonus(S, R, seat, "Photograph") + shelfEffect(S, R, seat, "book") + flPts;
   const pts = base + sets.reduce((t, x) => t + x.pts, 0);
   const sx = sets.length ? " Sets: " + sets.map((x) => x.name + " (" + x.why + ") +" + x.pts).join(", ") + "." : " No sets yet.";
   return {
-    ok: true, letter: ok[0], pts, sets, ents, n,
-    msg: n + " cards on thesis " + ok[0] + ": " + base + " base" + (sets.length ? " + " + (pts - base) + " in sets" : "") + " = " + pts + " prestige." + sx,
+    ok: true, letter: ok[0], pts, sets, ents, n, falseLead: fls > 0,
+    msg: n + (fls ? " False Leads" : " cards on thesis " + ok[0]) + ": " + base + " base" + (sets.length ? " + " + (pts - base) + " in sets" : "") + " = " + pts + " prestige." + sx,
   };
 }
 
@@ -336,7 +398,7 @@ export function doBook(S, R, seat, aUid, handUids, shelfUids, showUid) {
     f.e.usedBy.push(seat);
     if (f.owner !== seat) {
       const o = S.players[f.owner];
-      o.prestige += R.config.citePts + bonus(S, R, f.owner, "Newspaper");
+      o.prestige += R.config.citePts + bonus(S, R, f.owner, "Newspaper") + shelfEffect(S, R, f.owner, "cite");
       o.cites++;
       cited.push(f.owner);
     }
@@ -347,21 +409,60 @@ export function doBook(S, R, seat, aUid, handUids, shelfUids, showUid) {
   p.cv.push({ type: "book", title, letter: r.letter, pts: r.pts, n: r.n });
   log(S, {
     type: "book", seat, title, n: r.n, L: r.letter, pts: r.pts, sets: r.sets.map((x) => x.name),
-    show: showUid || null, cited, hand: handUids.slice(), shelf: shelfUids.slice(),
+    show: showUid || null, cited, hand: handUids.slice(), shelf: shelfUids.slice(), ...(r.falseLead ? { falseLead: true } : {}),
   });
   return null;
 }
 
 // The tier the next buyer of a pile gets (deeper copies are stronger), or null if the pile is empty.
+// Upgrades returned by Organize (S.returned) sit on top of the pile and are sold first, the last returned first.
 export function nextTier(S, R, pileId) {
   const pl = R.pileById.get(pileId);
-  const left = pl ? S.market[pileId] : 0;
+  if (!pl) return null;
+  const back = S.returned?.[pileId];
+  if (back?.length) return back[back.length - 1];
+  const left = S.market[pileId];
   return left ? pl.tiers[pl.tiers.length - left] : null;
+}
+export const pileLeft = (S, pileId) => (S.market[pileId] || 0) + (S.returned?.[pileId]?.length || 0);
+
+// Purchasing power of a set of discards for one player: the cards' power, plus network cards held (each adds
+// its bonus while in hand), Letters' passive bonus and False Lead bookshelf effects.
+export function buyPower(S, R, seat, disc) {
+  const p = S.players[seat];
+  let t = 0;
+  for (const u of disc) t += powerOf(S, R, u);
+  for (const u of p.hand) if (kindOf(S, u) === "action" && def(S, R, u).kind === "network") t += def(S, R, u).bonus || 0;
+  return t + bonus(S, R, seat, "Letter") + shelfEffect(S, R, seat, "power");
+}
+export const buysLeft = (S, R, seat) => (R.config.buying ? R.config.buying.perTurn + shelfEffect(S, R, seat, "buys") - (S.bought || 0) : 0);
+
+// Buying, an ability every player has under the current rules: discard cards from hand whose purchasing power
+// adds up to at least a pile's price, and put the pile's next upgrade on your discard pile.
+export function doBuy(S, R, seat, disc, pileId) {
+  const p = S.players[seat];
+  if (!R.config.buying) return "There is no buying in these rules.";
+  if (buysLeft(S, R, seat) < 1) return "You have already bought this turn.";
+  const pl = R.pileById.get(pileId);
+  if (!pl || !pileLeft(S, pileId)) return "That upgrade is gone.";
+  if (!disc.length) return "Discard at least one card.";
+  if (disc.some((u) => !p.hand.includes(u))) return "Bad discard.";
+  const power = buyPower(S, R, seat, disc);
+  if (power < pl.value) return "Those cards are worth " + power + "; that upgrade costs " + pl.value + ".";
+  const tier = nextTier(S, R, pileId);
+  if (S.returned[pileId]?.length) S.returned[pileId].pop();
+  else S.market[pileId]--;
+  for (const u of disc) p.discard.push(take(p.hand, u));
+  p.discard.push(mk(S, "action", tier));
+  S.bought++;
+  log(S, { type: "buy", seat, n: disc.length, power, pile: pileId, up: tier, disc: disc.slice() });
+  return null;
 }
 
 export function doNetwork(S, R, seat, aUid, disc, pileId, replUid) {
   const p = S.players[seat];
   if (!actCheck(S, R, p, aUid, "network")) return "Not a network card.";
+  if (R.config.buying) return "There is no Network action in these rules: buy instead.";
   const pl = R.pileById.get(pileId);
   if (!pl || !S.market[pileId]) return "That upgrade is gone.";
   if (!disc.length) return "Discard at least one card.";
@@ -397,7 +498,8 @@ export function endTurn(S, R, keepUids) {
   const kn = keep.length;
   p.hand = keep;
   p.play = [];
-  draw(S, seat, Math.max(0, R.config.handSize - kn));
+  draw(S, seat, Math.max(0, handLimit(S, R, seat) - kn));
+  if (R.config.buying) S.bought = 0;
   log(S, { type: "endTurn", seat, kept: kn });
   S.turn = (S.turn + 1) % S.players.length;
   if (S.turn === 0) {

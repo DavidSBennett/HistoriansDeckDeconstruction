@@ -15,6 +15,14 @@ function Picture({ R, d }) {
   return <div className="pic none" style={{ background: color(R, d.arg) }} aria-hidden="true"><span className="mono">{d.type}</span></div>;
 }
 
+/** Is this source a False Lead under these rules? */
+export const isFL = (R, d) => !!R.config.falseLead && !!d.falseLead;
+/** The purchasing-power coin, when the rules have buying. */
+export function Power({ R, n }) {
+  if (!R.config.buying) return null;
+  return <span className="pw" title="Purchasing power">{n}</span>;
+}
+
 export function Tags({ R, d }) {
   return (
     <>
@@ -31,19 +39,23 @@ function clickProps(onClick, cls) {
 }
 
 export function SourceCard({ R, d, cls = "", onClick, mini, foot, onRead }) {
-  const b = R.bonuses[d.type];
+  const fl = isFL(R, d);
+  const b = fl ? null : R.bonuses[d.type];
+  const e = fl ? R.falseLeads[d.type] : null;
   return (
-    <div {...clickProps(onClick, "card " + cls + (mini ? " mini" : ""))}>
-      <div className="hd mono"><span>{d.type}</span><span>{d.date}</span></div>
+    <div {...clickProps(onClick, "card " + cls + (mini ? " mini" : "") + (fl ? " fl" : ""))}>
+      <div className="hd mono"><span>{fl ? "False Lead · " : ""}{d.type}</span><span>{d.date}</span></div>
       <Picture R={R} d={d} />
       <div className="bd">
         <div className="ti">{d.title}</div>
         {!mini && <div className="au">{d.author}</div>}
         <div className="era mono">{d.era}{d.stance ? " · " + d.stance : ""}</div>
         {b && <div className="bonus"><b>{b.name}.</b> {b.text}</div>}
+        {fl && <div className="bonus flb"><b>On your bookshelf{e ? ": " + e.name : ""}.</b> {e ? e.text : "No effect."}</div>}
         <div className="tags">
           <span className="num" title="Chronological number">{d.num}</span>
           <Tags R={R} d={d} />
+          <Power R={R} n={fl ? 0 : d.power ?? 1} />
           {onRead && <button className="read" onClick={(e) => { e.stopPropagation(); onRead(d); }}>Read</button>}
         </div>
         {foot}
@@ -57,7 +69,8 @@ export function ActionCard({ R, id, cls = "", onClick }) {
   return (
     <div {...clickProps(onClick, "card act " + cls)}>
       <div className="hd mono"><span>Action</span><span>{d.value ? "Upgrade " + d.value : "Basic"}</span></div>
-      <div className="bd"><div className="nm">{d.name}</div><div className="tx">{d.text}</div></div>
+      <div className="bd"><div className="nm">{d.name}</div><div className="tx">{d.text}</div>
+        {R.config.buying && <div className="tags" style={{ marginTop: "auto" }}><Power R={R} n={d.power ?? 0} /></div>}</div>
     </div>
   );
 }
@@ -96,7 +109,9 @@ export function Modal({ children, onClose }) {
 }
 
 export function ReadCard({ R, d, onClose }) {
-  const b = R.bonuses[d.type];
+  const fl = isFL(R, d);
+  const b = fl ? null : R.bonuses[d.type];
+  const e = fl ? R.falseLeads[d.type] : null;
   const url = imageUrl(R, d);
   return (
     <Modal onClose={onClose}>
@@ -112,9 +127,16 @@ export function ReadCard({ R, d, onClose }) {
       {d.quote && <div className="q">{d.quote}</div>}
       <p>{d.content}</p>
       {b && <div className="bonus"><b>Passive bonus: {b.name}.</b> {b.text} Counts in your hand and on your bookshelf.</div>}
+      {fl && (
+        <div className="bonus flb">
+          <b>False Lead.</b> Not evidence: it can only be published with other False Leads (an article of two from any eras, +{R.config.falseLead.articlePts};
+          a book from any theses, +{R.config.falseLead.bookCardPts} per card), and it has no purchasing power.
+          {e && <> <b>On your bookshelf: {e.name}.</b> {e.text}</>}
+        </div>
+      )}
       <div className="sig">{d.significance}</div>
       <div className="tags" style={{ marginTop: 12 }}>
-        <span className="num">{d.num}</span><Tags R={R} d={d} />
+        <span className="num">{d.num}</span><Tags R={R} d={d} /><Power R={R} n={fl ? 0 : d.power ?? 1} />
         <span className="mono">&nbsp;{d.era}{d.stance ? " · " + d.stance : ""}</span>
       </div>
       <div style={{ marginTop: 6 }}>

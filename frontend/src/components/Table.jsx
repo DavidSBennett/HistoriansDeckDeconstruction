@@ -4,7 +4,7 @@
 // previews, and describe() writes the log.
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { bookCheck, bonus, keepLimit, nextTier, describe } from "@engine/index.mjs";
+import { bookCheck, bonus, keepLimit, nextTier, describe, articlePair, buyPower, buysLeft, pileLeft, shelfEffect } from "@engine/index.mjs";
 import { Card, SourceCard, ActionCard, Modal, ReadCard, color } from "./Cards.jsx";
 import TopBar from "./TopBar.jsx";
 import RulesModal from "./RulesModal.jsx";
@@ -33,6 +33,8 @@ export default function Table({ game, view: G, R, act }) {
   const aDef = ui.a ? def(ui.a) : null;
   const fixedResearch = ui.mode === "research" && Number.isInteger(aDef?.take);
   const read = (d) => setModal({ kind: "read", d });
+  const isFL = (u) => kindOf(u) === "source" && !!R.config.falseLead && !!srcOf(u).falseLead;
+  const canBuy = !!R.config.buying && myTurn && buysLeft(G, R, me) > 0;
 
   useEffect(() => { if (!myTurn && ui.mode && !busy) setUi(EMPTY); }, [myTurn]); // eslint-disable-line
   useEffect(() => { if (G.over && !shownResults) { setModal({ kind: "results" }); setShownResults(true); } }, [G.over]); // eslint-disable-line
@@ -65,7 +67,9 @@ export default function Table({ game, view: G, R, act }) {
     if (!ui.mode) return kindOf(u) === "action";
     if (ui.mode === "keep") return true;
     if (ui.mode === "organize" || ui.step === 1 || u === ui.a || fixedResearch) return false;
-    return ui.mode === "research" || ui.mode === "network" ? true : kindOf(u) === "source";
+    if (ui.mode === "buy" || ui.mode === "research" || ui.mode === "network") return true;
+    if (ui.mode === "conference") return kindOf(u) === "source" && !isFL(u);
+    return kindOf(u) === "source";
   }
   function clickHand(u) {
     if (!handClickable(u)) return;
@@ -81,6 +85,10 @@ export default function Table({ game, view: G, R, act }) {
     if (!ui.mode) {
       const d = def(u);
       if (d.kind === "draw") return send({ type: "playDraw", card: u });
+      if (d.kind === "organize" && d.returns) {
+        setUi({ ...EMPTY, mode: "organize", a: u, sel: [] });
+        return setModal({ kind: "organize" });
+      }
       if (d.kind === "organize") {
         const t = [...p.hand, ...p.discard].filter((x) => kindOf(x) === "trash");
         if (!t.length) return setStatus("You have no trash cards in your hand or discard pile.");
@@ -110,9 +118,11 @@ export default function Table({ game, view: G, R, act }) {
     send({ type: "research", card: ui.a, stack: L, ...(fixedResearch ? {} : { discard: ui.sel }) }, (ev) => showFound(ev, toHand));
   }
   const netValue = ui.mode === "network" ? ui.sel.length + (aDef?.bonus || 0) + bonus(G, R, me, "Letter") : -1;
-  const pileClickable = (pl) => myTurn && ui.mode === "network" && G.market[pl.pile] > 0 && netValue >= pl.value;
+  const buyValue = ui.mode === "buy" ? buyPower(G, R, me, ui.sel) : -1;
+  const pileClickable = (pl) => myTurn && (ui.mode === "network" ? netValue : ui.mode === "buy" && ui.sel.length ? buyValue : -1) >= pl.value && pileLeft(G, pl.pile) > 0;
   function clickPile(pl) {
     if (!pileClickable(pl)) return;
+    if (ui.mode === "buy") return send({ type: "buy", discard: ui.sel, pile: pl.pile });
     setUi((s) => ({ ...s, up: pl.pile }));
     setModal({ kind: "replace" });
   }
@@ -122,7 +132,7 @@ export default function Table({ game, view: G, R, act }) {
     setUi((s) => ({ ...s, shelf: s.shelf.includes(e.uid) ? s.shelf.filter((x) => x !== e.uid) : [...s.shelf, e.uid] }));
   }
   const bookSel = ui.mode === "book" ? bookCheck(G, R, me, aDef, ui.sel, ui.shelf) : null;
-  const sameEra = ui.mode === "article" && ui.sel.length === 2 && ui.sel.every((u) => kindOf(u) === "source") && srcOf(ui.sel[0]).era === srcOf(ui.sel[1]).era;
+  const sameEra = ui.mode === "article" && ui.sel.length === 2 && ui.sel.every((u) => kindOf(u) === "source") && articlePair(G, R, ui.sel[0], ui.sel[1]);
   function endTurn() {
     if (!myTurn) return;
     reset();
@@ -138,9 +148,13 @@ export default function Table({ game, view: G, R, act }) {
   const bonusSum = (q, shelfOnly) => {
     const out = [];
     for (const t of Object.keys(R.bonuses)) {
-      const sh = q.shelf.filter((e) => srcOf(e.uid).type === t).length;
-      const h = shelfOnly || !q.hand ? 0 : q.hand.filter((u) => kindOf(u) === "source" && srcOf(u).type === t).length;
+      const sh = q.shelf.filter((e) => srcOf(e.uid).type === t && !isFL(e.uid)).length;
+      const h = shelfOnly || !q.hand ? 0 : q.hand.filter((u) => kindOf(u) === "source" && srcOf(u).type === t && !isFL(u)).length;
       if (sh + h) out.push(<span key={t}>{out.length ? " · " : ""}<b>{R.bonuses[t].name}</b> ×{sh + h}{h && !shelfOnly ? <span className="note"> ({sh} shelf, {h} hand)</span> : null}</span>);
+    }
+    for (const t of Object.keys(R.falseLeads || {})) {
+      const n = q.shelf.filter((e) => isFL(e.uid) && srcOf(e.uid).type === t).length;
+      if (n) out.push(<span key={"fl" + t}>{out.length ? " · " : ""}<b>{R.falseLeads[t].name}</b> ×{n} <span className="note">(False Lead)</span></span>);
     }
     return <div className="bsum">{shelfOnly ? "Bookshelf bonuses: " : "Active bonuses: "}{out.length ? out : <span className="note">none</span>}</div>;
   };
@@ -165,7 +179,11 @@ export default function Table({ game, view: G, R, act }) {
   else if (myDraft) msg = <><b>Choose your field.</b> Pick a card archive to start from.</>;
   else if (myPending) msg = <><b>Research.</b> Choose which cards to put back.</>;
   else if (acting !== me) msg = <>{G.players[acting].name} is {G.phase === "draft" ? "choosing a field" : "taking a turn"}…</>;
-  else if (!ui.mode) { msg = <><b>Your turn.</b> Click an action card in your hand to play it. You may play any number of them.</>; btns.push(B("End turn", endTurn)); }
+  else if (!ui.mode) {
+    msg = <><b>Your turn.</b> Click an action card in your hand to play it. You may play any number of them.{R.config.buying ? " You may also buy an upgrade." : ""}</>;
+    if (R.config.buying) btns.push(B(buysLeft(G, R, me) > 0 ? "Buy an upgrade" : "Already bought", () => { setUi({ ...EMPTY, mode: "buy" }); setStatus(""); }, !canBuy, true));
+    btns.push(B("End turn", endTurn));
+  }
   else if (ui.mode === "keep") {
     const lim = keepLimit(G, R, me), k = ui.sel.length;
     msg = <><b>End of turn.</b> You may keep up to {plural(lim, "card")} in hand for next turn. Click to choose.</>;
@@ -182,14 +200,15 @@ export default function Table({ game, view: G, R, act }) {
       st = fixedResearch || n ? `You will ${look ? `look at ${take + look} and keep ${take}` : `take ${take}`} from the archive you click.` : "Nothing selected yet.";
     }
     if (ui.mode === "network") { msg = <><b>{aDef.name}.</b> Select cards to discard, then click an upgrade you can afford.</>; st = `Discards count as ${netValue}.`; }
+    if (ui.mode === "buy") { msg = <><b>Buy an upgrade.</b> Select cards in your hand to discard, then click an upgrade you can afford. It goes to your discard pile.</>; st = n ? `Purchasing power: ${buyValue}.` : "Nothing selected yet."; }
     if (ui.mode === "conference") { msg = <><b>{aDef.name}.</b> Select one source in your hand.</>; btns.push(B("Publish paper", () => send({ type: "conference", card: ui.a, source: ui.sel[0] }), n !== 1)); }
     if (ui.mode === "article") {
       if (ui.step === 1) {
         msg = <><b>Which card goes on your bookshelf?</b> The other goes to your discard pile.</>;
         for (const u of ui.sel) btns.push(B(srcOf(u).title, () => send({ type: "article", card: ui.a, sources: ui.sel, showcase: u })));
       } else {
-        msg = <><b>{aDef.name}.</b> Select two sources from the same era.</>;
-        st = n === 2 && !sameEra ? "Those two are from different eras." : `${n} of 2 selected.`;
+        msg = <><b>{aDef.name}.</b> Select two sources from the same era{R.config.falseLead ? ", or two False Leads from any eras" : ""}.</>;
+        st = n === 2 && !sameEra ? (ui.sel.some(isFL) ? "A False Lead can only be published with another False Lead." : "Those two are from different eras.") : `${n} of 2 selected.`;
         btns.push(B("Continue", () => setUi((s) => ({ ...s, step: 1 })), !sameEra));
       }
     }
@@ -199,7 +218,7 @@ export default function Table({ game, view: G, R, act }) {
         st = bookSel.msg;
         for (const u of ui.sel) btns.push(B(`No. ${srcOf(u).num} ${srcOf(u).title}`, () => send({ type: "book", card: ui.a, hand: ui.sel, shelf: ui.shelf, showcase: u })));
       } else {
-        msg = <><b>{aDef.name}.</b> Select {aDef.min || R.config.bookMin}+ cards that share a thesis letter (big or small): at least {R.config.bookMinFromHand} from hand, the rest from any bookshelf.</>;
+        msg = <><b>{aDef.name}.</b> Select {aDef.min || R.config.bookMin}+ cards that share a thesis letter (big or small){R.config.falseLead ? ", or that are all False Leads" : ""}: at least {R.config.bookMinFromHand} from hand, the rest from any bookshelf.</>;
         st = bookSel.msg;
         btns.push(B("Continue", () => setUi((s) => ({ ...s, step: 1 })), !bookSel.ok));
       }
@@ -215,7 +234,7 @@ export default function Table({ game, view: G, R, act }) {
     overlay = (
       <Modal>
         <h3>{p.name}: choose your field</h3>
-        <p>Take the top {R.config.startCards} cards of one card archive into your starting deck. You will not see them until you choose, and some may be trash.</p>
+        <p>Take the top {R.config.startCards} cards of one card archive into your starting deck. You will not see them until you choose, and some may be {R.config.trashPerStack ? "trash" : "False Leads"}.</p>
         <div className="row">
           {R.letters.map((L) => {
             const n = G.stacks[L], ok = n >= R.config.startCards;
@@ -260,6 +279,29 @@ export default function Table({ game, view: G, R, act }) {
         <div className="btns"><button onClick={() => setModal(null)}>Close</button></div>
       </Modal>
     );
+  } else if (modal?.kind === "organize" && aDef?.returns) {
+    const pick = (u) => setUi((s) => ({ ...s, sel: s.sel.includes(u) ? s.sel.filter((x) => x !== u) : [...s.sel, u] }));
+    const group = (title, uids) => (
+      <>
+        <h4>{title}</h4>
+        <div className="row">
+          {uids.length ? uids.map((u) => <Card key={u} G={G} R={R} uid={u} cls={ui.sel.includes(u) ? "sel" : ""} onRead={read} onClick={() => pick(u)} />) : <div className="note">None.</div>}
+        </div>
+      </>
+    );
+    overlay = (
+      <Modal>
+        <h3>Organize: return cards</h3>
+        <p className="note">Click the cards to return. Sources go to the bottom of their card archive; upgrades go back on top of their pile in the conference space; basic cards leave the game.</p>
+        {group("Your hand", p.hand.filter((u) => u !== ui.a))}
+        {group("Your discard pile", p.discard)}
+        {err && <p className="error">{err}</p>}
+        <div className="btns">
+          <button className="ghost" onClick={() => { reset(); setModal(null); }}>Cancel</button>
+          <button disabled={!ui.sel.length || busy} onClick={() => send({ type: "organize", card: ui.a, cards: ui.sel })}>Return {ui.sel.length}</button>
+        </div>
+      </Modal>
+    );
   } else if (modal?.kind === "organize") {
     const t = [...p.hand, ...p.discard].filter((x) => kindOf(x) === "trash");
     overlay = (
@@ -273,7 +315,7 @@ export default function Table({ game, view: G, R, act }) {
         {err && <p className="error">{err}</p>}
         <div className="btns">
           <button className="ghost" onClick={() => { reset(); setModal(null); }}>Cancel</button>
-          <button disabled={!ui.sel.length || busy} onClick={() => send({ type: "organize", card: ui.a, trash: ui.sel })}>Throw out {ui.sel.length}</button>
+          <button disabled={!ui.sel.length || busy} onClick={() => send({ type: "organize", card: ui.a, cards: ui.sel })}>Throw out {ui.sel.length}</button>
         </div>
       </Modal>
     );
@@ -298,11 +340,11 @@ export default function Table({ game, view: G, R, act }) {
       <Modal onClose={() => setModal(null)}>
         <h3>{ranked[0].name} wins</h3>
         <table>
-          <thead><tr><th>Historian</th><th>Prestige</th><th>Books</th><th>Articles</th><th>Papers</th><th>Cited</th><th>Trash</th></tr></thead>
+          <thead><tr><th>Historian</th><th>Prestige</th><th>Books</th><th>Articles</th><th>Papers</th><th>Cited</th>{R.config.trashPerStack ? <th>Trash</th> : null}</tr></thead>
           <tbody>
             {ranked.map((q) => (
               <tr key={q.i}><td>{q.name}</td><td><b>{q.prestige}</b></td><td>{books(q)}</td><td>{q.cv.filter((x) => x.type === "article").length}</td>
-                <td>{q.cv.filter((x) => x.type === "paper").length}</td><td>{q.cites}</td><td>{q.trash ?? 0}</td></tr>
+                <td>{q.cv.filter((x) => x.type === "paper").length}</td><td>{q.cites}</td>{R.config.trashPerStack ? <td>{q.trash ?? 0}</td> : null}</tr>
             ))}
           </tbody>
         </table>
@@ -343,13 +385,16 @@ export default function Table({ game, view: G, R, act }) {
             <h2>Conference space: upgrade cards</h2>
             <div className="row">
               {R.piles.map((pl) => {
-                const left = G.market[pl.pile] || 0, tier = nextTier(G, R, pl.pile), t = pileClickable(pl);
+                const left = pileLeft(G, pl.pile), tier = nextTier(G, R, pl.pile), t = pileClickable(pl);
                 const shown = R.actions[tier || pl.tiers[pl.tiers.length - 1]];
-                const after = left > 1 ? R.actions[pl.tiers[pl.tiers.length - left + 1]] : null;
+                const back = G.returned?.[pl.pile] || [], fresh = G.market[pl.pile] || 0;
+                const afterId = back.length > 1 ? back[back.length - 2] : back.length === 1 ? (fresh ? pl.tiers[pl.tiers.length - fresh] : null) : fresh > 1 ? pl.tiers[pl.tiers.length - fresh + 1] : null;
+                const after = afterId ? R.actions[afterId] : null;
                 return (
                   <div key={pl.pile} className={"up" + (left ? "" : " gone") + (t ? " target" : "")} onClick={t ? () => clickPile(pl) : undefined} role={t ? "button" : undefined}>
                     <div><span className="val">{pl.value}</span> <span className="nm">{shown.name}</span></div>
                     <div className="tx">{shown.text}</div>
+                    {R.config.buying && <div className="note">Purchasing power {shown.power ?? 0}</div>}
                     {after && after.name !== shown.name && <div className="next">Then: {after.name}. {after.text}</div>}
                     <div className="mono" style={{ color: "var(--mute)", marginTop: "auto" }}>{left} left</div>
                   </div>

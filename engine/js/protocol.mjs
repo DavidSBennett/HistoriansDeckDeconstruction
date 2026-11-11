@@ -11,13 +11,14 @@
 // Messages (card ids are the integers the view shows):
 //   { type: "draft",          stack }
 //   { type: "playDraw",       card }
-//   { type: "organize",       card, trash: [ids] }
+//   { type: "organize",       card, cards: [ids] }                 (trash cards, or under the current rules any cards)
 //   { type: "research",       card, stack, discard?: [ids] }      (discard only for mock-up-style Research)
 //   { type: "researchChoose", putBack: [ids] }
 //   { type: "conference",     card, source }
 //   { type: "article",        card, sources: [id, id], showcase }
 //   { type: "book",           card, hand: [ids], shelf?: [ids], showcase? }
-//   { type: "network",        card, discard: [ids], pile, replace }
+//   { type: "network",        card, discard: [ids], pile, replace }  (the mock-up's rules)
+//   { type: "buy",            discard: [ids], pile }               (the current rules: no card needed)
 //   { type: "endTurn",        keep?: [ids] }
 import * as E from "./engine.mjs";
 import { botDraft, botStep, botKeep } from "./bots.mjs";
@@ -42,7 +43,7 @@ const ids = (field, { optional = false, len } = {}) => (a) => {
 const MESSAGES = {
   draft: { fields: [name("stack")], run: (S, R, seat, a) => E.doDraft(S, R, a.stack) },
   playDraw: { fields: [id("card")], run: (S, R, seat, a) => E.doDraw(S, R, seat, a.card) },
-  organize: { fields: [id("card"), ids("trash")], run: (S, R, seat, a) => E.doOrganize(S, R, seat, a.card, a.trash) },
+  organize: { fields: [id("card"), ids("cards")], run: (S, R, seat, a) => E.doOrganize(S, R, seat, a.card, a.cards) },
   research: {
     fields: [id("card"), name("stack"), ids("discard", { optional: true })],
     run: (S, R, seat, a) => E.doResearch(S, R, seat, a.card, a.discard ?? [], a.stack),
@@ -61,6 +62,7 @@ const MESSAGES = {
     fields: [id("card"), ids("discard"), name("pile"), id("replace")],
     run: (S, R, seat, a) => E.doNetwork(S, R, seat, a.card, a.discard, a.pile, a.replace),
   },
+  buy: { fields: [ids("discard"), name("pile")], run: (S, R, seat, a) => E.doBuy(S, R, seat, a.discard, a.pile) },
   endTurn: { fields: [ids("keep", { optional: true })], run: (S, R, seat, a) => E.endTurn(S, R, a.keep ?? []) },
 };
 export const MESSAGE_TYPES = Object.keys(MESSAGES);

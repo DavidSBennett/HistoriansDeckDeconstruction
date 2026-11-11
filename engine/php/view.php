@@ -11,6 +11,7 @@ const PRIVATE_FIELDS = [
     'article' => ['other'],
     'book' => ['hand'],
     'network' => ['out', 'disc'],
+    'buy' => ['disc'],
 ];
 
 function redactEvent(array $e, ?int $seat): array
@@ -104,11 +105,15 @@ function view(array $S, array $R, $seat): array
         $stacks[$L] = count($a);
     }
 
+    $buying = array_key_exists('returned', $S)
+        ? ['returned' => (object) array_map(static fn($l) => array_values($l), $S['returned']), 'bought' => $S['bought']]
+        : [];
     return [
         'v' => $S['v'], 'deckId' => $S['deckId'], 'you' => $me,
         'length' => $S['length'], 'round' => $S['round'], 'rounds' => $R['config']['rounds'][$S['length']],
         'phase' => $S['phase'], 'draftAt' => $S['draftAt'], 'turn' => $S['turn'], 'over' => $S['over'],
         'stacks' => (object) $stacks, 'market' => (object) $S['market'],
+    ] + $buying + [
         'players' => $players, 'pending' => $pending, 'cards' => (object) $cards, 'log' => $log,
     ];
 }

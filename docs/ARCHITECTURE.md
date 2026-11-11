@@ -16,6 +16,7 @@ was decided since and where the mock-up's code differs from the brief.
 | 2026-11-11 | **Research is redesigned** (draw X from a card archive, no discard cost) and upgrade piles grow stronger the deeper you buy, at a fixed price (see Rules changes). The exact port comes first, so parity with the mock-up is proven before any rule changes. |
 
 | 2026-11-11 | **The AI History deck is the Historians-Deck-Builder CSV edition** (`AI History/deck/ai-history-deck.csv`), imported with `npm run deck:import`. The mock-up's deck is kept as `ai-history-mockup`. |
+| 2026-11-11 | **Purchasing power, buying and False Leads** (step 9): Network is no longer a card but an ability every player has; bought cards go to the discard pile; Organize returns cards; trash is replaced by the deck's False Lead sources (see Rules changes, step 9). |
 
 ## Build order
 
@@ -28,6 +29,76 @@ was decided since and where the mock-up's code differs from the brief.
 7. ✔ React client, using the mock-up's layout and click flow (see "The client" below).
 8. ✔ Deploy workflow to projecta.thehistorians.org (see "Deploying" below). Still to do by hand: the server
    setup, the GitHub secrets, the first migration, and the two-browser smoke test, all in [DEPLOY.md](DEPLOY.md).
+9. ✔ Rules changes: purchasing power and buying, Organize returning cards, False Leads (see "Rules changes (step 9)").
+
+## Rules changes (step 9)
+
+Decided 2026-11-11. Games started before this keep the rules they started with (each game stores a rules
+snapshot), so they still play with Network and trash.
+
+**Purchasing power.** Every card has a `power`, shown on a gold coin:
+- basic starting cards 1 (`actions.json`);
+- sources 1 or 2, from the CSV's `bonus` column (now 1 on every card; set 2 there and re-import);
+- first-tier upgrades 2, second-tier upgrades 3;
+- False Leads 0, whatever the CSV says.
+
+**Buying replaces the Network card.** `network` is gone from `startingActions` and `actions.json`. Instead,
+every player may buy once per turn (`config.buying.perTurn`): discard cards from hand whose power adds up to a
+pile's price, and the pile's next card goes to **your discard pile**. Nothing is replaced. Protocol message:
+`{ type: "buy", discard: [ids], pile }`. Letters (Correspondence, +2) still add purchasing power while in
+hand, and so does a Society card in hand (+1 or +2). Pile prices are unchanged.
+
+**Organize returns cards** (`actions.organize.returns`). Choose any cards in your hand or discard pile
+(not the Organize card itself):
+- a source, False Leads included, goes to the bottom of its card archive;
+- a bought upgrade goes back on top of its pile and is the next one sold (`S.returned`, last returned first);
+- a basic card leaves the game.
+
+The message's list is now `cards` (it was `trash`).
+
+**Trash is gone.** `trashPerStack` and `trashPenalty` are 0. The archives hold 15 cards each.
+
+**False Leads** are the 20 sources the CSV tags "False Lead" in `context_tags` (5 per thesis); the importer
+sets `falseLead: true`. Settings: `config.falseLead` and `data/falseLeads.json`.
+- They are not evidence. They can't be presented at a conference, can't be published with ordinary sources,
+  and give no passive bonus.
+- An article of two False Leads may come from any eras: +3 (`falseLead.articlePts`).
+- A book made only of False Leads may come from any theses: +2 per card (`falseLead.bookCardPts`). Its title
+  comes from the thesis most of its cards belong to. Sets still score.
+- On the bookshelf, each False Lead has a strong effect set by its source type (`falseLeads.json`; amounts add
+  up per card). These are a first draft:
+
+| Type | Name | Effect on the bookshelf |
+|---|---|---|
+| Diary | Second Thoughts | Draw 1 more card when you draw up at the end of your turn (`hand`). |
+| Map | Hidden Chamber | Research takes 1 more card (`take`). |
+| Letter | Back Channel | +3 purchasing power (`power`). |
+| Speech | Cautionary Tale | Conference papers +3 (`paper`). |
+| Report | Debunking | Articles +3 (`article`). |
+| Photograph | Staged Photograph | Books +4 (`book`). |
+| Newspaper | Press Frenzy | Buy one more time each turn (`buys`). |
+
+Other effect keys the engine reads: `cite` (prestige when a rival cites you) and `keep` (keep more cards at
+the end of the turn).
+
+**Bots** buy the dearest upgrade they can pay for from a pile they own nothing from, paying with sources first.
+They publish False Lead articles and books when they can and showcase the False Lead. They don't use Organize.
+
+**The mock-up's rules still run.** Every new rule is switched on by data (`config.buying`,
+`config.falseLead`, `organize.returns`, `power`); without them the engine plays the mock-up exactly, so the
+parity check still covers everything that didn't change. Conformance records games under both rule sets.
+
+**Simulated** (seeds 1–1,000, medium):
+
+| Game | Average prestige by place | False Lead publications per game |
+|---|---|---|
+| 2 players | 71.8 / 46.8 | 1.6 articles, 1.0 books (15.8 prestige each) |
+| 3 players | 106.9 / 81.7 / 59.0 | 2.3 articles, 2.1 books (19.4) |
+| 4 players | 139.1 / 112.9 / 92.1 / 68.9 | 3.1 articles, 3.0 books (22.9) |
+
+Scores are lower than under the step 3 rules, and gaps between places are wider. Buying is cheap now: a hand
+of five is worth 5 or more, so bots buy nearly every upgrade in every game, and every pile sells out in 3- and
+4-player games. Raising pile prices is the obvious lever.
 
 ## Rules changes (step 3)
 
@@ -477,6 +548,9 @@ frontend/    React 18 + Vite 5 client, plain JS; imports engine/js through the @
 - `npm run data:validate` checks every deck; `npm run data:check` reports whether `data/` still matches the mock-up. It will stop matching once you rebalance; the parity tests use the mock-up's own constants, not `data/`.
 
 ## Open items
+
+- Step 9 balance: pile prices (buying is now cheap enough that every upgrade sells), which sources are worth 2
+  (the CSV's `bonus` column), and the False Lead bookshelf effects in `falseLeads.json`.
 
 - Are cards discarded to pay for an action (and the card Network replaces) public? Built as suggested: private, and the log shows only counts (see `PRIVATE_FIELDS` in `engine/js/view.mjs`; making one public means deleting it from that list, then porting the change to PHP).
 - An article's second source and a book's non-showcased hand cards go to the author's discard pile, which rivals can't see, so the log names them only to the author. Publications might reasonably show all their sources; it's a one-line change.

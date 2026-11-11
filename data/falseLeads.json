@@ -1,0 +1,37 @@
+{
+  "Diary": {
+    "name": "Second Thoughts",
+    "hand": 1,
+    "text": "Draw 1 more card when you draw up at the end of your turn."
+  },
+  "Map": {
+    "name": "Hidden Chamber",
+    "take": 1,
+    "text": "Research: take 1 more card."
+  },
+  "Letter": {
+    "name": "Back Channel",
+    "power": 3,
+    "text": "Buying: +3 purchasing power."
+  },
+  "Speech": {
+    "name": "Cautionary Tale",
+    "paper": 3,
+    "text": "Conference papers: +3 prestige."
+  },
+  "Report": {
+    "name": "Debunking",
+    "article": 3,
+    "text": "Articles: +3 prestige."
+  },
+  "Photograph": {
+    "name": "Staged Photograph",
+    "book": 4,
+    "text": "Books: +4 prestige."
+  },
+  "Newspaper": {
+    "name": "Press Frenzy",
+    "buys": 1,
+    "text": "You may buy one more time each turn."
+  }
+}

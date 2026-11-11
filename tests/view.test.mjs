@@ -110,17 +110,17 @@ test("every log line in every view renders without gaps", () => {
     }
 });
 
-test("a redacted Network line names only what is public", () => {
+test("a rival's purchase shows what was bought and for how much, not which cards paid", () => {
   for (const S of states()) {
-    const e = S.log.find((x) => x.type === "network" && x.seat !== 0 && x.outKind === "source");
+    const e = S.log.find((x) => x.type === "buy" && x.seat !== 0);
     if (!e) continue;
     const v = E.view(S, R, 0);
-    const line = E.describe(v.log[S.log.indexOf(e)], v, R);
-    assert.match(line, /replacing a source \(back to card archive [A-Z]\)\.$/);
-    assert.equal(E.describe(e, S, R).includes("“"), true, "the full line names the card");
+    const seen = v.log[S.log.indexOf(e)];
+    assert.equal(seen.disc, undefined);
+    assert.equal(E.describe(seen, v, R), E.describe(e, S, R), "the line itself names no cards");
     return;
   }
-  assert.fail("no rival Network replacing a source found");
+  assert.fail("no rival purchase found");
 });
 
 test("your view has what the client needs to preview your own book and bonuses", () => {

@@ -23,7 +23,9 @@ test("data/ keeps the mock-up's deck (as ai-history-mockup) and bonuses", () => 
   const plainTheses = (r) => Object.fromEntries(Object.entries(r.theses).map(([L, { color, ...t }]) => [L, t]));
   assert.deepEqual(fromData.cards, R.cards);
   assert.deepEqual(plainTheses(fromData), plainTheses(R));
-  assert.deepEqual(fromData.bonuses, R.bonuses);
+  // Bonus names and amounts are the mock-up's; Letter's text now says "Buying" (step 9).
+  const noText = (b) => Object.fromEntries(Object.entries(b).map(([t, { text, ...x }]) => [t, x]));
+  assert.deepEqual(noText(fromData.bonuses), noText(R.bonuses));
   assert.deepEqual(fromData.trash, R.trash);
 });
 

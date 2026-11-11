@@ -17,8 +17,13 @@ export function describe(e, G, R) {
       return nm(e.seat) + " begins in field " + e.L + " and takes " + e.n + " cards from that " + W + ".";
     case "playDraw":
       return nm(e.seat) + " plays " + R.actions[e.action].name + " and draws " + e.k + ".";
-    case "organize":
-      return nm(e.seat) + " organizes and throws out " + plural(e.n, "trash card") + ".";
+    case "organize": {
+      if (!e.archives) return nm(e.seat) + " organizes and throws out " + plural(e.n, "trash card") + ".";
+      const parts = Object.keys(e.archives).sort().map((L) => e.archives[L] + " to " + W + " " + L);
+      for (const pile of e.piles) parts.push("an upgrade to the conference space");
+      if (e.removed) parts.push(e.removed + " out of the game");
+      return nm(e.seat) + " organizes and returns " + plural(e.n, "card") + ": " + parts.join(", ") + ".";
+    }
     case "research":
       return (
         nm(e.seat) + " researches: " + (e.n ? "discards " + e.n + ", " : "") +
@@ -28,10 +33,10 @@ export function describe(e, G, R) {
     case "conference":
       return nm(e.seat) + " presents a conference paper on “" + src(G, R, e.source).title + "” (+" + e.pts + ").";
     case "article":
-      return nm(e.seat) + " publishes the article “" + e.title + "” (+" + e.pts + "), showcasing “" + src(G, R, e.show).title + "”.";
+      return nm(e.seat) + " publishes " + (e.falseLead ? "a False Lead article, " : "the article ") + "“" + e.title + "” (+" + e.pts + "), showcasing “" + src(G, R, e.show).title + "”.";
     case "book":
       return (
-        nm(e.seat) + " publishes the BOOK “" + e.title + "”: " + e.n + " cards on thesis " + e.L + " (+" + e.pts + ")" +
+        nm(e.seat) + " publishes the BOOK “" + e.title + "”: " + e.n + (e.falseLead ? " False Leads" : " cards on thesis " + e.L) + " (+" + e.pts + ")" +
         (e.sets.length ? ", with " + e.sets.join(" and ") : "") +
         (e.show ? ", showcasing " + nameOf(G, R, e.show) : "") +
         (e.cited.length ? ", citing " + [...new Set(e.cited.map(nm))].join(" and ") + " (+" + R.config.citePts + " per card cited)" : "") +
@@ -43,6 +48,8 @@ export function describe(e, G, R) {
         (e.out !== undefined ? nameOf(G, R, e.out) : OUT_KIND[e.outKind]) +
         (e.outArchive ? " (back to " + W + " " + e.outArchive + ")" : "") + "."
       );
+    case "buy":
+      return nm(e.seat) + " discards " + e.n + " (worth " + e.power + ") and buys " + R.actions[e.up].name + ".";
     case "endTurn":
       return nm(e.seat) + " ends the turn" + (e.kept ? ", keeping " + plural(e.kept, "card") + " in hand" : "") + ".";
     case "trashPenalty":

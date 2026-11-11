@@ -14,11 +14,12 @@
 // Event fields only the acting player may see. Everything else in an event is public.
 export const PRIVATE_FIELDS = {
   draft: ["cards"], // the cards drawn from the archive
-  organize: ["cards"], // which trash cards were thrown out
+  organize: ["cards"], // which cards were thrown out or returned (where they went stays public)
   research: ["got", "back"], // which cards were taken and put back
   article: ["other"], // the source that went to the discard pile
   book: ["hand"], // hand cards other than the showcase, now in the author's discard pile (the showcase stays public)
   network: ["out", "disc"], // the replaced card and the discards (kind and archive stay public)
+  buy: ["disc"], // the discards (their number and total power stay public)
 };
 
 export function redactEvent(e, seat) {
@@ -81,6 +82,7 @@ export function view(S, R, seat) {
     length: S.length, round: S.round, rounds: R.config.rounds[S.length],
     phase: S.phase, draftAt: S.draftAt, turn: S.turn, over: S.over,
     stacks, market: { ...S.market },
+    ...(S.returned ? { returned: JSON.parse(JSON.stringify(S.returned)), bought: S.bought } : {}),
     players, pending, cards, log,
   };
 }

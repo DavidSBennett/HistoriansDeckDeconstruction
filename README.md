@@ -55,9 +55,10 @@ Every rule number and every piece of card text is in `data/`. Change them there;
 hard-codes them. A new deck goes in `data/decks/<id>/deck.json` with the same card fields.
 
 - `config.json`: hand size, scores, book table, rounds, set thresholds, draft and trash numbers.
-- `actions.json`: every action card, including both tiers of each upgrade. Research cards use `take`.
+- `actions.json`: every action card, including both tiers of each upgrade, with its purchasing `power`. Research cards use `take`.
 - `market.json`: the conference space's upgrade piles, each with one price and its tiers from the top down.
-- `bonuses.json`, `trash.json`: passive bonuses by source type, and the trash cards.
+- `bonuses.json`, `trash.json`: passive bonuses by source type, and the trash cards (unused while `trashPerStack` is 0).
+- `falseLeads.json`: what a False Lead does on the bookshelf, by source type. `config.falseLead` holds the article and book bonuses, `config.buying` the purchases per turn.
 
 After editing, run `npm run data:validate`, then `npm run sim` to see the effect.
 
@@ -67,7 +68,7 @@ The AI History deck is built from the Historians-Deck-Builder spreadsheet. After
 npm run deck:import -- "../Historians-Deck-Builder/AI History/deck/ai-history-deck.csv" ai-history --name "AI History" --images "../Historians-Deck-Builder/AI History/photo-gallery"
 ```
 
-It prints the chronological numbering and checks the deck before writing it. `--images` takes each card's
+It prints the chronological numbering and checks the deck before writing it. A card's `bonus` column is its purchasing power (1 or 2), and a "False Lead" entry in `context_tags` makes it a False Lead. `--images` takes each card's
 picture from the gallery by name (`a1.jpg` is card A1, `c10.jpg` is C10), shrinks it for the web, and saves it
 in `data/decks/ai-history/images/`. Cards without a picture show a placeholder. Compare decks with
 `npm run sim -- --deck ai-history-mockup`.

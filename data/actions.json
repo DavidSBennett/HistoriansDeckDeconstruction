@@ -3,43 +3,44 @@
     "name": "Attend Conference",
     "kind": "conference",
     "value": 0,
+    "power": 1,
     "text": "Choose one source in hand and present it as a conference paper. The card goes to your discard pile."
   },
   "article": {
     "name": "Publish an Article",
     "kind": "article",
     "value": 0,
-    "text": "Choose two sources in hand from the same era. Showcase one on your bookshelf."
+    "power": 1,
+    "text": "Choose two sources in hand from the same era, or two False Leads from any era (+3). Showcase one on your bookshelf."
   },
   "book": {
     "name": "Publish a Book",
     "kind": "book",
     "value": 0,
-    "text": "Choose four or more cards on one thesis: from hand, your bookshelf, or rivals' bookshelves (a citation)."
+    "power": 1,
+    "text": "Choose four or more cards on one thesis, or four or more False Leads from any theses (+2 each): from hand, your bookshelf, or rivals' bookshelves (a citation)."
   },
   "research": {
     "name": "Research",
     "kind": "research",
     "value": 0,
+    "power": 1,
     "take": 2,
     "text": "Draw 2 cards from a card archive."
-  },
-  "network": {
-    "name": "Network",
-    "kind": "network",
-    "value": 0,
-    "text": "Discard n cards from hand. Take the next upgrade from a pile worth n or less; it replaces a card in your discard pile."
   },
   "organize": {
     "name": "Organize",
     "kind": "organize",
     "value": 0,
-    "text": "Remove any number of trash cards from your hand or discard pile. They leave the game."
+    "power": 1,
+    "text": "Return any number of cards from your hand or discard pile: sources to their card archive, upgrades to the conference space. Basic cards leave the game.",
+    "returns": true
   },
   "sabbatical": {
     "name": "Sabbatical",
     "kind": "draw",
     "value": 1,
+    "power": 2,
     "draw": 2,
     "text": "Draw 2 cards."
   },
@@ -47,6 +48,7 @@
     "name": "Extended Sabbatical",
     "kind": "draw",
     "value": 1,
+    "power": 3,
     "draw": 3,
     "text": "Draw 3 cards."
   },
@@ -54,6 +56,7 @@
     "name": "Keynote Address",
     "kind": "conference",
     "value": 2,
+    "power": 2,
     "pts": 6,
     "text": "Conference paper worth 6 instead of 2."
   },
@@ -61,6 +64,7 @@
     "name": "Plenary Address",
     "kind": "conference",
     "value": 2,
+    "power": 3,
     "pts": 8,
     "text": "Conference paper worth 8 instead of 2."
   },
@@ -68,6 +72,7 @@
     "name": "Travel Grant",
     "kind": "research",
     "value": 3,
+    "power": 2,
     "take": 4,
     "text": "Draw 4 cards from a card archive."
   },
@@ -75,20 +80,23 @@
     "name": "Society Membership",
     "kind": "network",
     "value": 2,
+    "power": 2,
     "bonus": 1,
-    "text": "Network: your discards count as n+1."
+    "text": "Buying: +1 purchasing power while this is in your hand."
   },
   "society2": {
     "name": "Society Council Seat",
     "kind": "network",
     "value": 2,
+    "power": 3,
     "bonus": 2,
-    "text": "Network: your discards count as n+2."
+    "text": "Buying: +2 purchasing power while this is in your hand."
   },
   "agent": {
     "name": "Literary Agent",
     "kind": "article",
     "value": 3,
+    "power": 2,
     "pts": 5,
     "text": "Article worth 5 more prestige."
   },
@@ -96,6 +104,7 @@
     "name": "Senior Literary Agent",
     "kind": "article",
     "value": 3,
+    "power": 3,
     "pts": 7,
     "text": "Article worth 7 more prestige."
   },
@@ -103,6 +112,7 @@
     "name": "Research Assistant",
     "kind": "research",
     "value": 3,
+    "power": 3,
     "take": 5,
     "text": "Draw 5 cards from a card archive."
   },
@@ -110,6 +120,7 @@
     "name": "Fellowship",
     "kind": "draw",
     "value": 3,
+    "power": 2,
     "draw": 3,
     "text": "Draw 3 cards."
   },
@@ -117,6 +128,7 @@
     "name": "Senior Fellowship",
     "kind": "draw",
     "value": 3,
+    "power": 3,
     "draw": 4,
     "text": "Draw 4 cards."
   },
@@ -124,6 +136,7 @@
     "name": "University Press",
     "kind": "book",
     "value": 4,
+    "power": 2,
     "pts": 4,
     "min": 3,
     "text": "Book needs only 3 cards and is worth 4 more prestige."
@@ -132,6 +145,7 @@
     "name": "Flagship University Press",
     "kind": "book",
     "value": 4,
+    "power": 3,
     "pts": 7,
     "min": 3,
     "text": "Book needs only 3 cards and is worth 7 more prestige."

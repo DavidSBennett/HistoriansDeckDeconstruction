@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace HistDeck;
 
 /**
- * Reads data/config.json, actions.json, bonuses.json, trash.json, market.json (optional) and
+ * Reads data/config.json, actions.json, bonuses.json, trash.json, market.json and falseLeads.json (optional) and
  * decks/<deckId>/deck.json as associative arrays.
  */
 function loadData(string $dataDir, string $deckId): array
@@ -21,12 +21,14 @@ function loadData(string $dataDir, string $deckId): array
         throw new \InvalidArgumentException('Bad deck id');
     }
     $market = "$dataDir/market.json";
+    $falseLeads = "$dataDir/falseLeads.json";
     return [
         'config' => $read("$dataDir/config.json"),
         'actions' => $read("$dataDir/actions.json"),
         'bonuses' => $read("$dataDir/bonuses.json"),
         'trash' => $read("$dataDir/trash.json"),
         'market' => is_file($market) ? $read($market) : null,
+        'falseLeads' => is_file($falseLeads) ? $read($falseLeads) : null,
         'deck' => $read("$dataDir/decks/$deckId/deck.json"),
     ];
 }
@@ -48,8 +50,12 @@ function makeRules(array $data): array
         }
     }
     $pileById = [];
+    $pileOfTier = [];
     foreach ($piles as $p) {
         $pileById[$p['pile']] = $p;
+        foreach ($p['tiers'] as $t) {
+            $pileOfTier[$t] = $p['pile'];
+        }
     }
     return [
         'config' => $config,
@@ -62,6 +68,8 @@ function makeRules(array $data): array
         'letters' => array_map('strval', array_keys($data['deck']['theses'])),
         'piles' => $piles,
         'pileById' => $pileById,
+        'pileOfTier' => $pileOfTier,
+        'falseLeads' => $data['falseLeads'] ?? [],
         'base' => $config['startingActions'],
         'archiveWord' => $config['terms']['archive'] ?? 'card archive',
         'bookCardsTo' => $config['bookCardsTo'] ?? 'discard',

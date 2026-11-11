@@ -27,18 +27,19 @@ const t0 = Date.now();
 for (const seats of seatCounts) {
   const st = makeStats(seats);
   const bought = {}, winnerBought = {};
-  let archiveLeft = 0, emptied = 0, research = 0, researchTaken = 0;
+  let archiveLeft = 0, emptied = 0, research = 0, researchTaken = 0, flArticles = 0, flBooks = 0, flPts = 0;
   for (let g = 0; g < games; g++) {
     const S = newGame(R, Array.from({ length: seats }, (_, i) => ({ name: "Bot " + (i + 1), bot: true })), length, firstSeed + g);
     playBotGame(S, R);
     const ranked = ranking(S);
     addGame(st, ranked);
     for (const e of S.log) {
-      if (e.type === "network") {
+      if (e.type === "network" || e.type === "buy") {
         bought[e.up] = (bought[e.up] || 0) + 1;
         if (e.seat === ranked[0].i) winnerBought[e.up] = (winnerBought[e.up] || 0) + 1;
       }
       if (e.type === "research") { research++; researchTaken += e.got.length; }
+      if (e.falseLead) { if (e.type === "article") flArticles++; else flBooks++; flPts += e.pts; }
     }
     for (const L of R.letters) { archiveLeft += S.stacks[L].length; if (!S.stacks[L].length) emptied++; }
   }
@@ -47,5 +48,6 @@ for (const seats of seatCounts) {
     `archives at the end: ${(archiveLeft / games / R.letters.length).toFixed(1)} cards each, ${((100 * emptied) / games / R.letters.length).toFixed(0)}% empty`);
   console.log("  upgrades bought per game (by the winner): " + R.piles.flatMap((pl) => [...new Set(pl.tiers)])
     .map((t) => `${R.actions[t].name} ${((bought[t] || 0) / games).toFixed(2)} (${((winnerBought[t] || 0) / games).toFixed(2)})`).join(", "));
+  if (R.config.falseLead) console.log(`  False Lead publications per game: ${(flArticles / games).toFixed(2)} articles, ${(flBooks / games).toFixed(2)} books, averaging ${(flPts / Math.max(1, flArticles + flBooks)).toFixed(1)} prestige`);
 }
 console.log(`(${((Date.now() - t0) / 1000).toFixed(1)} s)`);

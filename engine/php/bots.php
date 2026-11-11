@@ -34,8 +34,16 @@ function botBook(array $S, array $R, int $seat, int $a): ?array
     $d = def($S, $R, $a);
     $min = ($d['min'] ?? 0) ?: $R['config']['bookMin'];
     $best = null;
+    // One candidate per thesis letter, then (with False Leads) one made only of False Leads.
+    $groups = [];
     foreach ($R['letters'] as $L) {
-        $hs = filt($S['players'][$seat]['hand'], static fn($u) => isSource($S, $u) && in_array($L, tagsOf($S, $R, $u), true));
+        $groups[] = static fn($u) => !isFalseLead($S, $R, $u) && in_array($L, tagsOf($S, $R, $u), true);
+    }
+    if (!empty($R['config']['falseLead'])) {
+        $groups[] = static fn($u) => isFalseLead($S, $R, $u);
+    }
+    foreach ($groups as $fits) {
+        $hs = filt($S['players'][$seat]['hand'], static fn($u) => isSource($S, $u) && $fits($u));
         if (count($hs) < min($R['config']['bookMinFromHand'], $min)) {
             continue;
         }
@@ -43,7 +51,7 @@ function botBook(array $S, array $R, int $seat, int $a): ?array
         $riv = [];
         foreach ($S['players'] as $q) {
             foreach ($q['shelf'] as $e) {
-                if (in_array($L, tagsOf($S, $R, $e['uid']), true) && !in_array($seat, $e['usedBy'], true)) {
+                if ($fits($e['uid']) && !in_array($seat, $e['usedBy'], true)) {
                     if ($q['i'] === $seat) {
                         $own[] = $e['uid'];
                     } else {
@@ -87,7 +95,7 @@ function botStep(array &$S, array $R): bool
         return filt($S['players'][$seat]['hand'], static fn($u) => isSource($S, $u));
     };
 
-    if (($a = $H('organize')) !== null) {
+    if (($a = $H('organize')) !== null && empty(def($S, $R, $a)['returns'])) {
         $p = $S['players'][$seat];
         $t = filt(array_merge($p['hand'], $p['discard']), static fn($u) => isTrash($S, $u));
         if (count($t) && doOrganize($S, $R, $seat, $a, $t) === null) {
@@ -108,8 +116,8 @@ function botStep(array &$S, array $R): bool
         $s = $srcs();
         for ($i = 0; $i < count($s); $i++) {
             for ($j = $i + 1; $j < count($s); $j++) {
-                if (sameEra($S, $R, $s[$i], $s[$j])) {
-                    $show = (src($S, $R, $s[$i])['sub'] ?? '') !== '' ? $s[$i] : $s[$j];
+                if (articlePair($S, $R, $s[$i], $s[$j])) {
+                    $show = isFalseLead($S, $R, $s[$i]) || (src($S, $R, $s[$i])['sub'] ?? '') !== '' ? $s[$i] : $s[$j];
                     if (doArticle($S, $R, $seat, $a, $s[$i], $s[$j], $show) === null) {
                         return true;
                     }
@@ -118,7 +126,7 @@ function botStep(array &$S, array $R): bool
         }
     }
     $owned = count(allSources($S, $S['players'][$seat]));
-    if (($a = $H('network')) !== null && $owned >= 4) {
+    if (empty($R['config']['buying']) && ($a = $H('network')) !== null && $owned >= 4) {
         $p = $S['players'][$seat];
         $others = filt($p['hand'], static fn($u) => $u !== $a);
         $bon = (def($S, $R, $a)['bonus'] ?? 0) + bonus($S, $R, $seat, 'Letter');
@@ -181,8 +189,11 @@ function botStep(array &$S, array $R): bool
             }
         }
     }
+    if (!empty($R['config']['buying']) && $owned >= 4 && buysLeft($S, $R, $seat) > 0 && botBuy($S, $R, $seat)) {
+        return true;
+    }
     if (($a = $H('conference')) !== null) {
-        $s = $srcs();
+        $s = filt($srcs(), static fn($u) => !isFalseLead($S, $R, $u));
         if (count($s)) {
             $cnt = static function ($c) use ($S, $R, $seat) {
                 $era = src($S, $R, $c)['era'];
@@ -260,4 +271,54 @@ function botKeep(array $S, array $R): array
         $out[] = $ar;
     }
     return array_slice($out, 0, $lim);
+}
+
+/**
+ * Buying (current rules): the dearest upgrade the bot can pay for, from a pile it owns nothing from, paid with
+ * the fewest cards: sources first, then action cards, the most powerful first.
+ */
+function botBuy(array &$S, array $R, int $seat): bool
+{
+    $p = $S['players'][$seat];
+    $ownedActions = [];
+    foreach (array_merge($p['deck'], $p['hand'], $p['discard'], $p['play']) as $u) {
+        if (kindOf($S, $u) === 'action') {
+            $ownedActions[refOf($S, $u)] = true;
+        }
+    }
+    $pool = v8sort(
+        filt($p['hand'], static fn($u) => powerOf($S, $R, $u) > 0),
+        static fn($x, $y) => ((isSource($S, $y) ? 1 : 0) - (isSource($S, $x) ? 1 : 0)) ?: (powerOf($S, $R, $y) - powerOf($S, $R, $x))
+    );
+    if (!count($pool)) {
+        return false;
+    }
+    $all = buyPower($S, $R, $seat, $pool);
+    $opts = v8sort(
+        filt($R['piles'], static function ($pl) use ($S, $ownedActions, $all) {
+            if (!pileLeft($S, $pl['pile']) || $pl['value'] > $all) {
+                return false;
+            }
+            foreach ($pl['tiers'] as $t) {
+                if (isset($ownedActions[$t])) {
+                    return false;
+                }
+            }
+            return true;
+        }),
+        static fn($x, $y) => $y['value'] - $x['value']
+    );
+    foreach ($opts as $pl) {
+        $disc = [];
+        foreach ($pool as $u) {
+            if (buyPower($S, $R, $seat, $disc) >= $pl['value']) {
+                break;
+            }
+            $disc[] = $u;
+        }
+        if (doBuy($S, $R, $seat, $disc, $pl['pile']) === null) {
+            return true;
+        }
+    }
+    return false;
 }

@@ -1,9 +1,12 @@
 // The mock-up's greedy bots, ported exactly. They act for the player whose turn it is (S.turn), or for the
 // current drafter. Note that botDraft and the Research archive choice break ties with random() inside a
 // sort comparator, so their use of random numbers depends on the sort algorithm; the PHP port must copy V8's.
+// Under the current rules (config.buying, False Leads) they also buy and publish False Leads; with the mock-up's
+// rules those branches never run, so the mock-up's choices are unchanged.
 import {
-  random, def, src, tagsOf, isSource, isTrash, kindOf, refOf, bonus, keepLimit, allSources, bookCheck, sameEra,
+  random, def, src, tagsOf, isSource, isTrash, kindOf, refOf, bonus, keepLimit, allSources, bookCheck, articlePair,
   doDraft, doOrganize, doDraw, doBook, doArticle, doNetwork, doConference, doResearch, endTurn, nextTier,
+  isFalseLead, powerOf, buyPower, buysLeft, pileLeft, doBuy,
 } from "./engine.mjs";
 
 export function botDraft(S, R) {
@@ -29,13 +32,16 @@ export function botBook(S, R, seat, aUid) {
   const d = def(S, R, aUid);
   const min = d.min || R.config.bookMin;
   let best = null;
-  for (const L of R.letters) {
-    const hs = p.hand.filter((u) => isSource(S, u) && tagsOf(S, R, u).includes(L));
+  // One candidate per thesis letter, then (with False Leads) one made only of False Leads.
+  const groups = R.letters.map((L) => (u) => !isFalseLead(S, R, u) && tagsOf(S, R, u).includes(L));
+  if (R.config.falseLead) groups.push((u) => isFalseLead(S, R, u));
+  for (const fits of groups) {
+    const hs = p.hand.filter((u) => isSource(S, u) && fits(u));
     if (hs.length < Math.min(R.config.bookMinFromHand, min)) continue;
     const own = [], riv = [];
     for (const q of S.players)
       for (const e of q.shelf)
-        if (tagsOf(S, R, e.uid).includes(L) && !e.usedBy.includes(seat)) (q.i === seat ? own : riv).push(e.uid);
+        if (fits(e.uid) && !e.usedBy.includes(seat)) (q.i === seat ? own : riv).push(e.uid);
     for (let k = 0; k <= riv.length; k++) {
       const sh = own.concat(riv.slice(0, k));
       if (hs.length + sh.length < min) continue;
@@ -55,7 +61,7 @@ export function botStep(S, R) {
   const H = (k) => p.hand.find((u) => kindOf(S, u) === "action" && def(S, R, u).kind === k);
   const srcs = () => p.hand.filter((u) => isSource(S, u));
   let a;
-  if ((a = H("organize"))) {
+  if ((a = H("organize")) && !def(S, R, a).returns) {
     const t = [...p.hand, ...p.discard].filter((u) => isTrash(S, u));
     if (t.length && doOrganize(S, R, seat, a, t) === null) return true;
   }
@@ -71,13 +77,13 @@ export function botStep(S, R) {
     const s = srcs();
     for (let i = 0; i < s.length; i++)
       for (let j = i + 1; j < s.length; j++)
-        if (sameEra(S, R, s[i], s[j])) {
-          const show = src(S, R, s[i]).sub ? s[i] : s[j];
+        if (articlePair(S, R, s[i], s[j])) {
+          const show = isFalseLead(S, R, s[i]) || src(S, R, s[i]).sub ? s[i] : s[j];
           if (doArticle(S, R, seat, a, s[i], s[j], show) === null) return true;
         }
   }
   const owned = allSources(S, p).length;
-  if ((a = H("network")) && owned >= 4) {
+  if (!R.config.buying && (a = H("network")) && owned >= 4) {
     const others = p.hand.filter((u) => u !== a);
     const bon = (def(S, R, a).bonus || 0) + bonus(S, R, seat, "Letter");
     // A bot buys at most one card from each pile (in the mock-up: at most one copy of each upgrade).
@@ -104,8 +110,9 @@ export function botStep(S, R) {
       if (doNetwork(S, R, seat, a, disc, pl.pile, tgt) === null) return true;
     }
   }
+  if (R.config.buying && owned >= 4 && buysLeft(S, R, seat) > 0 && botBuy(S, R, seat)) return true;
   if ((a = H("conference"))) {
-    const s = srcs();
+    const s = srcs().filter((u) => !isFalseLead(S, R, u));
     if (s.length) {
       const cnt = (c) => allSources(S, p).filter((x) => src(S, R, x).era === src(S, R, c).era).length;
       s.sort((x, y) => cnt(x) - cnt(y));
@@ -120,6 +127,29 @@ export function botStep(S, R) {
       const L = botArchive(S, R, seat);
       if (L && typeof doResearch(S, R, seat, a, disc, L, botReject) === "object") return true;
     }
+  }
+  return false;
+}
+
+// Buying (current rules): the dearest upgrade the bot can pay for, from a pile it owns nothing from, paid with
+// the fewest cards: sources first, then action cards, the most powerful first.
+function botBuy(S, R, seat) {
+  const p = S.players[seat];
+  const ownedActions = new Set([...p.deck, ...p.hand, ...p.discard, ...p.play].filter((u) => kindOf(S, u) === "action").map((u) => refOf(S, u)));
+  const pool = p.hand
+    .filter((u) => powerOf(S, R, u) > 0)
+    .sort((x, y) => (isSource(S, y) ? 1 : 0) - (isSource(S, x) ? 1 : 0) || powerOf(S, R, y) - powerOf(S, R, x));
+  if (!pool.length) return false;
+  const opts = R.piles
+    .filter((pl) => pileLeft(S, pl.pile) && !pl.tiers.some((t) => ownedActions.has(t)) && pl.value <= buyPower(S, R, seat, pool))
+    .sort((x, y) => y.value - x.value);
+  for (const pl of opts) {
+    const disc = [];
+    for (const u of pool) {
+      if (buyPower(S, R, seat, disc) >= pl.value) break;
+      disc.push(u);
+    }
+    if (doBuy(S, R, seat, disc, pl.pile) === null) return true;
   }
   return false;
 }
