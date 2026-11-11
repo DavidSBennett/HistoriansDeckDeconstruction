@@ -19,6 +19,17 @@ jobs:
       # A slice of the mock-up parity check; the full run takes ~7 minutes (npm run parity).
       - run: node tools/parity.mjs --games 100 --fuzz 30
 
+  frontend:
+    name: Frontend builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend
+
   php:
     name: PHP ${{ matrix.php }} matches the JS engine
     runs-on: ubuntu-latest
