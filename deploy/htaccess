@@ -1,0 +1,33 @@
+# .htaccess for projecta.thehistorians.org (copied to the document root by tools/publish.mjs).
+# The React app (index.html, assets/) and the PHP backend (*.php) share this folder.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Pass the Authorization header through to PHP (cPanel's Apache and LiteSpeed sometimes strip it).
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # A real file or folder is served as it is: every PHP endpoint, the assets, the opcache reset.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Anything else is a route of the React app (/login, /game/12): hand it to index.html.
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Libraries, the build stamp and the secrets are only ever included by other PHP files.
+<FilesMatch "^(lib|db|auth|games|build_info|config\.secret.*)\.php$">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  # Built asset names change with every build, so they can be cached for good.
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  # index.html names the current assets, so it must never be cached.
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>

@@ -4,6 +4,6 @@ RewriteCond %{HTTP:Authorization} .
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
 # Library files and secrets are never requested directly.
-<FilesMatch "^(lib|db|auth|games|config\.secret.*)\.php$">
+<FilesMatch "^(lib|db|auth|games|build_info|config\.secret.*)\.php$">
   Require all denied
 </FilesMatch>

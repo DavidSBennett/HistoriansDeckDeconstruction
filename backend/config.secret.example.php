@@ -30,3 +30,8 @@ define('DK_ALLOWED_ORIGIN_SUFFIX', '.thehistorians.org');
 
 // ----- Where players register and reset passwords (Board owns accounts) -----
 define('DK_ACCOUNTS_SITE', 'https://board.thehistorians.org');
+
+// ----- Deploys -----
+// The token the deploy workflow uses to clear PHP's compiled-code cache (_opcache_reset.php). Use a long random
+// string, at least 16 characters, and put the same value in the GitHub secret OPCACHE_TOKEN.
+define('DK_OPCACHE_TOKEN', 'change-me-to-a-long-random-string');

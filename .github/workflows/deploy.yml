@@ -1,0 +1,108 @@
+# Tests, builds and deploys to projecta.thehistorians.org on every push to main (or by hand from the Actions
+# tab). Modelled on Historians_Board_Version's deploy-board.yml: rsync over SSH, never --delete, never touching
+# config.secret.php, then a printed opcode-cache reset. Differences: the full test suite runs first and the
+# upload happens only if it passes; the cache-reset token is a secret, not written into the repo; and a health
+# check at the end says whether the server is ready.
+#
+# Repository secrets (Settings > Secrets and variables > Actions), the same four as Board's plus one:
+#   SSH_HOST, SSH_USERNAME, SSH_PORT, SSH_PRIVATE_KEY   the GreenGeeks SSH login
+#   OPCACHE_TOKEN                                       same value as DK_OPCACHE_TOKEN in config.secret.php
+# Optional repository variable:
+#   DEPLOY_DIR   the subdomain's document root, relative to the SSH home (default public_html/projecta.thehistorians.org)
+# Until SSH_HOST is set, the deploy job skips itself instead of failing.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-projecta
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      SITE: https://projecta.thehistorians.org
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR || 'public_html/projecta.thehistorians.org' }}
+    steps:
+      - name: Check the deploy secrets
+        id: secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          if [ -z "$SSH_HOST" ]; then
+            echo "::notice::SSH_HOST is not set, so nothing was deployed. See docs/DEPLOY.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build and assemble publish/
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          npm ci --prefix frontend
+          node tools/publish.mjs --build-number "${{ github.run_number }}" --commit "${{ github.sha }}"
+
+      # Plain rsync over ssh, as Board does: no marketplace action to download (that download has failed
+      # Board's deploys before). No --delete, so files that live only on the server are never removed.
+      - name: Upload with rsync over SSH
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          OPCACHE_TOKEN: ${{ secrets.OPCACHE_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          SSH_CMD="ssh -p ${SSH_PORT:-22} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
+
+          rsync -rltgoDzvO --no-perms \
+            -e "$SSH_CMD" \
+            --exclude 'config.secret.php' \
+            --exclude 'dbConfig.php' \
+            publish/ "${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/"
+
+          # Print the reset result; a silent failure leaves the server running old PHP (Board learned this).
+          echo "[opcache] clearing PHP's compiled-code cache..."
+          if [ -n "${OPCACHE_TOKEN:-}" ]; then
+            $SSH_CMD "${SSH_USER}@${SSH_HOST}" "curl -s -m 30 '${SITE}/_opcache_reset.php?token=${OPCACHE_TOKEN}'" \
+              || echo "[opcache] RESET REQUEST FAILED: the site may run old PHP until it is reset by hand"
+          else
+            echo "[opcache] OPCACHE_TOKEN is not set; skipping (see docs/DEPLOY.md)"
+          fi
+          echo
+          rm -f ~/.ssh/deploy_key
+
+      - name: Health check
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          code=$(curl -s -o health.json -w '%{http_code}' -m 30 "${SITE}/dk_health.php" || echo 000)
+          cat health.json || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::warning::The files are uploaded, but dk_health.php reports the server is not ready (HTTP $code). See docs/DEPLOY.md."
+            exit 1
+          fi
+          grep -q "\"commit\": \"$(echo '${{ github.sha }}' | cut -c1-12)\"" health.json \
+            || echo "::warning::The health check did not report this commit; the old version may still be served."

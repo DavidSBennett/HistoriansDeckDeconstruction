@@ -49,9 +49,21 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/games.php';
 
-$DB = new DkDb(DK_DB_DSN, defined('DK_DB_USER') ? DK_DB_USER : null, defined('DK_DB_PASS') ? DK_DB_PASS : null);
+// A failed connection says which database, never the driver's message (it can name the user and host).
+function dk_connect(string $which, string $dsn, ?string $user, ?string $pass): DkDb
+{
+    try {
+        return new DkDb($dsn, $user, $pass);
+    } catch (PDOException $e) {
+        http_response_code(503);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => "The $which database is not reachable right now. If this persists, see dk_health.php."]);
+        exit;
+    }
+}
+$DB = dk_connect('game', DK_DB_DSN, defined('DK_DB_USER') ? DK_DB_USER : null, defined('DK_DB_PASS') ? DK_DB_PASS : null);
 $ACC = defined('DK_ACCOUNTS_DSN')
-    ? new DkDb(DK_ACCOUNTS_DSN, defined('DK_ACCOUNTS_USER') ? DK_ACCOUNTS_USER : null, defined('DK_ACCOUNTS_PASS') ? DK_ACCOUNTS_PASS : null)
+    ? dk_connect('accounts', DK_ACCOUNTS_DSN, defined('DK_ACCOUNTS_USER') ? DK_ACCOUNTS_USER : null, defined('DK_ACCOUNTS_PASS') ? DK_ACCOUNTS_PASS : null)
     : $DB;
 
 const DK_JSON = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;

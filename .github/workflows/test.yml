@@ -1,9 +1,11 @@
-# Runs on every push and pull request. The deploy workflow (build step 8) will require this to pass.
+# Runs on every push and pull request, and as the first stage of deploy.yml, which uploads only if it passes.
 name: test
 
 on:
   push:
+    branches-ignore: [main] # main is tested by deploy.yml, which calls this workflow
   pull_request:
+  workflow_call:
 
 jobs:
   js:
