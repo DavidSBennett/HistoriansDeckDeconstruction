@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: build steps 1–4 done (2026-11-11); next is step 5, the PHP engine. The original spec is [BRIEF.md](BRIEF.md); this file records what
+Status: build steps 1–5 done (2026-11-11); step 5 is waiting for review. The original spec is [BRIEF.md](BRIEF.md); this file records what
 was decided since and where the mock-up's code differs from the brief.
 
 ## Decisions
@@ -20,7 +20,7 @@ was decided since and where the mock-up's code differs from the brief.
 2. ✔ JS engine: exact port with serialisable state, checked against the mock-up step by step (see "The JS engine" below). **Review stop.**
 3. ✔ Rules changes in the JS engine (Research, tiered upgrade piles), with new reference numbers. **Review stop.**
 4. ✔ Protocol wrapper (turn, phase, pending choice, repeated ids), structured events, `view(state, seat)`, and hidden-information tests (see "Protocol and views" below).
-5. PHP engine plus conformance: the JS engine records test games, the PHP engine replays them and must match exactly; GitHub Actions runs both before any deploy. **Review stop.**
+5. ✔ PHP engine plus conformance: the JS engine records test games, the PHP engine replays them and must match exactly; GitHub Actions runs both (see "The PHP engine" below). **Review stop.**
 6. Shared login, DB migrations, PHP backend (lobby, polling, actions, server-side bots).
 7. React client, using the mock-up's layout and click flow.
 8. Deploy workflow to projecta.thehistorians.org; first migration run by hand; two-browser smoke test.
@@ -221,15 +221,56 @@ only thing the server sends a client.
     changed, and every message that can't be legal is refused.
   - A game played through the protocol matches the same choices made directly on the engine.
 
+## The PHP engine (step 5)
+
+`engine/php/` is a function-for-function port of `engine/js/`: the same rules, error messages, events and
+views. The backend will load it with `require "engine/php/engine_all.php"` and call `HistDeck\newGame`,
+`apply`, `advanceBots` and `view`. It needs **PHP 8.1 or later**; check GreenGeeks' version in cPanel.
+
+What had to be imitated exactly:
+- **The random generator.** JavaScript runs mulberry32 in 32-bit integers, and PHP's integers are 64-bit, so
+  `rng.php` masks every step by hand (`i32`, `urs`, `imul`). Checked against JS: 12,000 draws from six seeds,
+  including negative seeds and seeds past 2³¹, all bit-identical.
+- **V8's sort.** The bots break ties with a random number inside a sort comparator, so how many random numbers
+  a sort draws depends on the sort algorithm. `v8sort()` reproduces V8's TimSort for small arrays (one run,
+  then binary insertion), calling the comparator in the same order. Every sort in the PHP engine goes through it.
+- **JSON shapes.** Messages are decoded as objects (`json_decode($json)`), so a JSON object and a JSON list
+  stay as distinct as they are in JS. Lists in the state stay lists (`array_values` after filtering).
+
+**Conformance** (`npm run conformance`):
+- `tools/record-conformance.mjs` records 54 games with the JS engine, op by op, the way the server will run
+  them: `newGame`, `advanceBots`, then `apply` for every human message followed by `advanceBots`.
+  - Human seats make random choices; 20% of their messages are corrupted on purpose.
+  - Bot-only games advance one turn at a time.
+  - Games run under the current `data/` rules and under the mock-up's rules.
+- After every op the recording keeps a hash of the canonical state and of the new events. After every change
+  it keeps a hash of the view for every seat and for a spectator.
+- `engine/php/tests/conformance.php` replays everything and stops at the first difference. It writes the PHP
+  state to `build/conformance/` and prints the command that dumps the matching JS state.
+- Current result: all 54 games and 14,504 ops match, including 9,856 views and 1,778 refused messages
+  (identical error text), in about 6 seconds.
+- To prove it can fail, it was run against three deliberately broken copies of the PHP engine: a plain sort
+  in place of `v8sort`, a view that leaked an article's second source, and citations without the Newspaper
+  bonus. It caught all three.
+- Recordings are generated, not committed (`build/` is git-ignored).
+
+**CI** (`.github/workflows/test.yml`) runs the JS tests, data validation and a slice of the mock-up parity
+check. It also runs `php -l` and the conformance replay on PHP 8.1 and 8.3. It hasn't run on GitHub yet,
+because nothing has been pushed.
+
+**Rule changes from now on:** change `engine/js`, run `npm test`, then port the change to `engine/php` until
+`npm run conformance` passes.
+
 ## Repository layout
 
 ```
 reference/   the mock-up, unchanged; the parity tests load its script
-data/        config.json, actions.json, bonuses.json, trash.json, decks/<id>/deck.json
-tools/       extract-data, validate-data, simulate, mockup-sim, parity; lib/ has fuzz, play and perturb helpers
+data/        config.json, actions.json, bonuses.json, trash.json, market.json, decks/<id>/deck.json
+tools/       extract-data, validate-data, simulate, mockup-sim, parity, record-conformance, lint-php;
+             lib/ has fuzz, play, perturb and canon helpers
 tests/       node:test suites
 engine/js/   reference engine: rng, rules, engine, bots, describe, protocol, view
-engine/php/  step 5: authoritative port
+engine/php/  authoritative port: rng, rules, engine, bots, protocol, view, canon; tests/conformance.php
 backend/     step 6: PHP endpoints, flat like Board's backend/
 database/    step 6: NN_description.sql migrations, run by hand
 frontend/    step 7: React 18 + Vite + Tailwind, plain JS

@@ -13,6 +13,8 @@
     "data:validate": "node tools/validate-data.mjs",
     "sim": "node tools/simulate.mjs",
     "sim:mockup": "node tools/mockup-sim.mjs",
-    "parity": "node tools/parity.mjs"
+    "parity": "node tools/parity.mjs",
+    "conformance": "node tools/record-conformance.mjs && php engine/php/tests/conformance.php",
+    "lint:php": "node tools/lint-php.mjs"
   }
 }

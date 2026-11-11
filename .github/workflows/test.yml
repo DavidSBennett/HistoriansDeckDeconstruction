@@ -1,0 +1,40 @@
+# Runs on every push and pull request. The deploy workflow (build step 8) will require this to pass.
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  js:
+    name: JS tests and simulations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - run: npm run data:validate
+      # A slice of the mock-up parity check; the full run takes ~7 minutes (npm run parity).
+      - run: node tools/parity.mjs --games 100 --fuzz 30
+
+  php:
+    name: PHP ${{ matrix.php }} matches the JS engine
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.1", "8.3"] # 8.1 is the oldest the engine supports; check GreenGeeks' version in cPanel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: none
+          coverage: none
+      - run: npm run lint:php
+      - run: npm run conformance

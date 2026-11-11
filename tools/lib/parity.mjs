@@ -13,18 +13,18 @@ import { fuzzRandom, fuzzAction } from "./fuzz.mjs";
 
 const plain = (x) => JSON.parse(JSON.stringify(x));
 
-export function mockupRules(mock) {
+// The mock-up's rules as data files would hold them (no market.json, so upgrades are flat copies).
+export function mockupData(mock) {
   const { DATA, CONFIG, ACTIONS, BASE, TRASH, BONUS } = mock.consts;
-  return E.makeRules(
-    plain({
-      config: { ...CONFIG, startingActions: BASE, terms: { archive: "stack" }, bookCardsTo: "archive" },
-      actions: ACTIONS,
-      bonuses: BONUS,
-      trash: TRASH,
-      deck: { id: "mockup", theses: DATA.theses, cards: DATA.cards },
-    })
-  );
+  return plain({
+    config: { ...CONFIG, startingActions: BASE, terms: { archive: "stack" }, bookCardsTo: "archive" },
+    actions: ACTIONS,
+    bonuses: BONUS,
+    trash: TRASH,
+    deck: { id: "mockup", theses: DATA.theses, cards: DATA.cards },
+  });
 }
+export const mockupRules = (mock) => E.makeRules(mockupData(mock));
 
 // ---------- normalising both sides to one shape ----------
 const uids = (arr) => arr.map((c) => c.uid);

@@ -9,7 +9,7 @@ on GreenGeeks: a PHP/MySQL backend that owns the game, and a React/Vite client t
 
 ## Commands
 
-Needs Node 22 or later. There are no dependencies to install yet.
+Needs Node 22 or later, and PHP 8.1 or later for the PHP checks. There are no dependencies to install yet.
 
 | Command | What it does |
 |---|---|
@@ -18,6 +18,10 @@ Needs Node 22 or later. There are no dependencies to install yet.
 | `npm run data:validate` | Checks `data/` for mistakes after a rebalance or deck swap. |
 | `npm run parity` | The full check of the engine against the mock-up: 11,700 games compared after every step (about 7 minutes). Options: `-- --games 100 --fuzz 50`. |
 | `npm run sim:mockup` | The same simulation as `sim`, but with the mock-up's own logic, for reference numbers. |
+| `npm run conformance` | Records 54 games with the JS engine and replays them with the PHP engine, which must match after every step. Needs `php` (8.1+) on the PATH. |
+| `npm run lint:php` | Syntax-checks every PHP file. |
+
+GitHub Actions runs the tests, a slice of the parity check, and the PHP checks on PHP 8.1 and 8.3 on every push.
 | `npm run data:check` | Reports whether `data/` still matches the mock-up's constants. |
 | `npm run data:extract` | Regenerates `data/` from the mock-up. **This overwrites any rebalancing.** |
 
