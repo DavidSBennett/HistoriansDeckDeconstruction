@@ -16,7 +16,7 @@ export function mockupRules(mock) {
   const { DATA, CONFIG, ACTIONS, BASE, TRASH, BONUS } = mock.consts;
   return E.makeRules(
     plain({
-      config: { ...CONFIG, startingActions: BASE },
+      config: { ...CONFIG, startingActions: BASE, terms: { archive: "stack" } },
       actions: ACTIONS,
       bonuses: BONUS,
       trash: TRASH,
@@ -204,7 +204,8 @@ export function fuzzAction(S, R, rnd) {
       return { fn: "organize", args: [a, t] };
     }
     case "research": {
-      let disc = sample(others, 1 + Math.floor(rnd() * others.length));
+      const fixed = kindOf(a) === "action" && Number.isInteger(R.actions[S.cards[a].ref].take);
+      let disc = fixed && rnd() < 0.9 ? [] : sample(others, 1 + Math.floor(rnd() * others.length));
       if (rnd() < 0.05) disc = addUnique(disc, a);
       return { fn: "research", args: [a, disc, rnd() < 0.05 ? "Z" : pick(R.letters)] };
     }
@@ -229,7 +230,7 @@ export function fuzzAction(S, R, rnd) {
     }
     case "network": {
       const disc = sample(others, Math.floor(rnd() * (others.length + 1)));
-      const up = rnd() < 0.9 ? pick(R.upgrades) : pick(Object.keys(R.actions));
+      const up = rnd() < 0.9 ? pick(R.piles.map((pl) => pl.pile)) : pick(Object.keys(R.actions));
       const repl = rnd() < 0.9 ? pick([...disc, ...p.discard]) : pick(others);
       return { fn: "network", args: [a, disc, up, repl] };
     }

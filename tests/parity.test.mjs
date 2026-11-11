@@ -18,15 +18,13 @@ test("fuzz games (random choices, including invalid ones) match the mock-up afte
   for (const [length, seats] of configs) for (let seed = 1; seed <= 6; seed++) fuzzGame(mock, R, seats, length, seed);
 });
 
-test("data/ gives the same rules as the mock-up (until you rebalance)", (t) => {
+test("data/ still has the mock-up's deck and bonuses", () => {
   const fromData = makeRules(loadData("ai-history"));
-  // Ignore what data/ adds on purpose: seat limits, thesis colours, the deck's id and name.
-  const strip = (r) => {
-    const { seats, ...config } = r.config;
-    const theses = Object.fromEntries(Object.entries(r.theses).map(([L, { color, ...t }]) => [L, t]));
-    return JSON.stringify({ config, theses, actions: r.actions, bonuses: r.bonuses, trash: r.trash, cards: r.cards, letters: r.letters, upgrades: r.upgrades, base: r.base });
-  };
-  if (strip(fromData) !== strip(R)) t.skip("data/ has been rebalanced away from the mock-up");
+  const plainTheses = (r) => Object.fromEntries(Object.entries(r.theses).map(([L, { color, ...t }]) => [L, t]));
+  assert.deepEqual(fromData.cards, R.cards);
+  assert.deepEqual(plainTheses(fromData), plainTheses(R));
+  assert.deepEqual(fromData.bonuses, R.bonuses);
+  assert.deepEqual(fromData.trash, R.trash);
 });
 
 // The harness has to be able to fail: change one rule number and the comparison must catch it.

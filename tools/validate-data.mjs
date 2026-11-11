@@ -15,10 +15,10 @@ export const CARD_FIELDS = [
 // Every numeric key the rules read from config.json.
 const CONFIG_NUMBERS = [
   "handSize", "paperPts", "articlePts", "bookBonus", "citePts", "bookMin", "bookMinFromHand",
-  "upgradeCopies", "runMin", "runPts", "typesMin", "typesPts", "startCards", "trashPerStack",
+  "runMin", "runPts", "typesMin", "typesPts", "startCards", "trashPerStack",
   "trashPenalty", "keepCards",
 ];
-const ACTION_MODIFIERS = { pts: "number", bonus: "number", look: "number", draw: "number", min: "number", toHand: "boolean" };
+const ACTION_MODIFIERS = { pts: "number", bonus: "number", look: "number", draw: "number", min: "number", take: "number", toHand: "boolean" };
 
 const readJSON = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 
@@ -29,11 +29,13 @@ export function listDecks(root = ROOT) {
 
 export function loadData(deckId, root = ROOT) {
   const d = (f) => readJSON(path.join(root, "data", f));
+  const marketFile = path.join(root, "data", "market.json");
   return {
     config: d("config.json"),
     actions: d("actions.json"),
     bonuses: d("bonuses.json"),
     trash: d("trash.json"),
+    market: fs.existsSync(marketFile) ? readJSON(marketFile) : null,
     deck: d(path.join("decks", deckId, "deck.json")),
   };
 }
@@ -41,12 +43,14 @@ export function loadData(deckId, root = ROOT) {
 const isInt = (n) => Number.isInteger(n);
 const isStr = (s) => typeof s === "string";
 
-export function validateData({ config, actions, bonuses, trash, deck }) {
+export function validateData({ config, actions, bonuses, trash, deck, market = null }) {
   const errors = [], warnings = [];
   const err = (m) => errors.push(m), warn = (m) => warnings.push(m);
 
   // config
   for (const k of CONFIG_NUMBERS) if (!isInt(config[k]) || config[k] < 0) err(`config.${k} must be a whole number >= 0`);
+  if (!market && (!isInt(config.upgradeCopies) || config.upgradeCopies < 1)) err("config.upgradeCopies is needed when there is no market.json");
+  if (config.terms !== undefined && !isStr(config.terms?.archive)) err("config.terms.archive must be a string");
   if (!config.rounds || typeof config.rounds !== "object") err("config.rounds is missing");
   else for (const [k, v] of Object.entries(config.rounds)) if (!isInt(v) || v < 1) err(`config.rounds.${k} must be a whole number >= 1`);
   const bcp = config.bookCardPts || {};
@@ -73,6 +77,29 @@ export function validateData({ config, actions, bonuses, trash, deck }) {
     if (!isInt(a.value) || a.value < 0) err(`actions.${id}.value must be a whole number >= 0`);
     for (const [m, t] of Object.entries(ACTION_MODIFIERS)) if (m in a && typeof a[m] !== t) err(`actions.${id}.${m} must be a ${t}`);
     if (a.kind === "draw" && !(a.draw > 0)) err(`actions.${id} is a draw card with no "draw" amount`);
+    if ("take" in a && (a.kind !== "research" || !isInt(a.take) || a.take < 1)) err(`actions.${id}.take must be a whole number >= 1 on a research card`);
+  }
+
+  // market: upgrade piles, sold top tier first, one price per pile
+  if (market) {
+    if (!Array.isArray(market)) err("market.json must be a list of piles");
+    else {
+      const ids = new Set(), sold = new Set();
+      market.forEach((pl, i) => {
+        const at = `market pile ${i} ("${pl.pile}")`;
+        if (!isStr(pl.pile) || !pl.pile) err(`market pile ${i} has no id`);
+        else if (ids.has(pl.pile)) err(`${at} appears twice`);
+        ids.add(pl.pile);
+        if (!isInt(pl.value) || pl.value < 1) err(`${at}: value must be a whole number >= 1`);
+        if (!Array.isArray(pl.tiers) || !pl.tiers.length) return err(`${at} has no tiers`);
+        for (const t of pl.tiers) {
+          sold.add(t);
+          if (!actions[t]) err(`${at} sells unknown action "${t}"`);
+          else if (actions[t].value !== pl.value) err(`${at}: action "${t}" shows value ${actions[t].value} but the pile costs ${pl.value}`);
+        }
+      });
+      for (const [id, a] of Object.entries(actions)) if (a.value > 0 && !sold.has(id)) warn(`upgrade "${id}" is in actions.json but not sold in market.json`);
+    }
   }
   for (const k of ACTION_KINDS) if (!Object.values(actions).some((a) => a.kind === k)) warn(`no action of kind "${k}"`);
 

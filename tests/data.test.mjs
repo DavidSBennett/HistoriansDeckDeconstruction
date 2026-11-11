@@ -65,9 +65,26 @@ test("validator accepts a fifth thesis and a bigger deck", () => {
   assert.deepEqual(validateData(d).errors, []);
 });
 
-test("starting actions and upgrades reference real actions", () => {
-  const { config, actions } = base();
+test("starting actions are basics and the market has the seven piles", () => {
+  const { config, actions, market } = base();
   for (const id of config.startingActions) assert.equal(actions[id].value, 0);
-  const upgrades = Object.keys(actions).filter((k) => actions[k].value > 0);
-  assert.deepEqual(upgrades, ["sabbatical", "keynote", "travel", "society", "agent", "assistant", "fellowship", "press"]);
+  assert.deepEqual(market.map((p) => p.pile), ["sabbatical", "keynote", "research", "society", "agent", "fellowship", "press"]);
+});
+
+test("validator catches market mistakes", () => {
+  const d = base();
+  d.market = clone(d.market);
+  d.market[0].tiers.push("nope");
+  d.market[1].value = 9;
+  d.market.push({ ...d.market[2] });
+  const { errors } = validateData(d);
+  assert.ok(errors.some((e) => e.includes('unknown action "nope"')));
+  assert.ok(errors.some((e) => e.includes("but the pile costs 9")));
+  assert.ok(errors.some((e) => e.includes("appears twice")));
+});
+
+test("validator needs upgradeCopies only when there is no market", () => {
+  const d = base();
+  d.market = null;
+  assert.ok(validateData(d).errors.some((e) => e.includes("upgradeCopies")));
 });

@@ -10,16 +10,16 @@ export function describe(e, S, R) {
     case "start":
       return "The game begins. It lasts " + e.rounds + " rounds.";
     case "draft":
-      return nm(e.seat) + " begins in field " + e.L + " and takes " + e.n + " cards from that stack.";
+      return nm(e.seat) + " begins in field " + e.L + " and takes " + e.n + " cards from that " + R.archiveWord + ".";
     case "playDraw":
       return nm(e.seat) + " plays " + R.actions[e.action].name + " and draws " + e.k + ".";
     case "organize":
       return nm(e.seat) + " organizes and throws out " + plural(e.n, "trash card") + ".";
     case "research":
       return (
-        nm(e.seat) + " researches: discards " + e.n + ", " +
+        nm(e.seat) + " researches: " + (e.n ? "discards " + e.n + ", " : "") +
         (e.back.length ? "looks at " + e.seen + " and " : "") +
-        "takes " + e.got.length + " from stack " + e.L + (e.toHand ? " into hand" : "") + "."
+        "takes " + e.got.length + " from " + R.archiveWord + " " + e.L + (e.toHand ? " into hand" : "") + "."
       );
     case "conference":
       return nm(e.seat) + " presents a conference paper on “" + src(S, R, e.source).title + "” (+" + e.pts + ").";
@@ -37,7 +37,7 @@ export function describe(e, S, R) {
       const out = S.cards[e.out];
       return (
         nm(e.seat) + " networks: discards " + e.n + " and takes " + R.actions[e.up].name + ", replacing " + nameOf(S, R, e.out) +
-        (out.kind === "source" ? " (back to stack " + R.cards[out.ref].arg + ")" : "") + "."
+        (out.kind === "source" ? " (back to " + R.archiveWord + " " + R.cards[out.ref].arg + ")" : "") + "."
       );
     }
     case "endTurn":

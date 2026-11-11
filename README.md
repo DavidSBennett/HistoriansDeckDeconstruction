@@ -25,3 +25,10 @@ Needs Node 22 or later. There are no dependencies to install yet.
 
 Every rule number and every piece of card text is in `data/`. Change them there; the engine code never
 hard-codes them. A new deck goes in `data/decks/<id>/deck.json` with the same card fields.
+
+- `config.json`: hand size, scores, book table, rounds, set thresholds, draft and trash numbers.
+- `actions.json`: every action card, including both tiers of each upgrade. Research cards use `take`.
+- `market.json`: the conference space's upgrade piles, each with one price and its tiers from the top down.
+- `bonuses.json`, `trash.json`: passive bonuses by source type, and the trash cards.
+
+After editing, run `npm run data:validate`, then `npm run sim` to see the effect.

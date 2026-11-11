@@ -21,13 +21,14 @@
     "name": "Research",
     "kind": "research",
     "value": 0,
-    "text": "Discard n cards from hand. Add n cards from one argument stack to your discard pile."
+    "take": 2,
+    "text": "Draw 2 cards from a card archive."
   },
   "network": {
     "name": "Network",
     "kind": "network",
     "value": 0,
-    "text": "Discard n cards from hand. Take an upgrade worth n or less; it replaces a card in your discard pile."
+    "text": "Discard n cards from hand. Take the next upgrade from a pile worth n or less; it replaces a card in your discard pile."
   },
   "organize": {
     "name": "Organize",
@@ -42,6 +43,13 @@
     "draw": 2,
     "text": "Draw 2 cards."
   },
+  "sabbatical2": {
+    "name": "Extended Sabbatical",
+    "kind": "draw",
+    "value": 1,
+    "draw": 3,
+    "text": "Draw 3 cards."
+  },
   "keynote": {
     "name": "Keynote Address",
     "kind": "conference",
@@ -49,12 +57,19 @@
     "pts": 6,
     "text": "Conference paper worth 6 instead of 2."
   },
+  "keynote2": {
+    "name": "Plenary Address",
+    "kind": "conference",
+    "value": 2,
+    "pts": 8,
+    "text": "Conference paper worth 8 instead of 2."
+  },
   "travel": {
     "name": "Travel Grant",
     "kind": "research",
-    "value": 2,
-    "look": 2,
-    "text": "Research: look at 2 more cards than you take, then put 2 back under the stack."
+    "value": 3,
+    "take": 4,
+    "text": "Draw 4 cards from a card archive."
   },
   "society": {
     "name": "Society Membership",
@@ -63,6 +78,13 @@
     "bonus": 1,
     "text": "Network: your discards count as n+1."
   },
+  "society2": {
+    "name": "Society Council Seat",
+    "kind": "network",
+    "value": 2,
+    "bonus": 2,
+    "text": "Network: your discards count as n+2."
+  },
   "agent": {
     "name": "Literary Agent",
     "kind": "article",
@@ -70,13 +92,19 @@
     "pts": 5,
     "text": "Article worth 5 more prestige."
   },
+  "agent2": {
+    "name": "Senior Literary Agent",
+    "kind": "article",
+    "value": 3,
+    "pts": 7,
+    "text": "Article worth 7 more prestige."
+  },
   "assistant": {
     "name": "Research Assistant",
     "kind": "research",
     "value": 3,
-    "toHand": true,
-    "look": 1,
-    "text": "Research: look at 1 more card than you take and put 1 back. The cards you keep go straight to your hand."
+    "take": 5,
+    "text": "Draw 5 cards from a card archive."
   },
   "fellowship": {
     "name": "Fellowship",
@@ -85,6 +113,13 @@
     "draw": 3,
     "text": "Draw 3 cards."
   },
+  "fellowship2": {
+    "name": "Senior Fellowship",
+    "kind": "draw",
+    "value": 3,
+    "draw": 4,
+    "text": "Draw 4 cards."
+  },
   "press": {
     "name": "University Press",
     "kind": "book",
@@ -92,5 +127,13 @@
     "pts": 4,
     "min": 3,
     "text": "Book needs only 3 cards and is worth 4 more prestige."
+  },
+  "press2": {
+    "name": "Flagship University Press",
+    "kind": "book",
+    "value": 4,
+    "pts": 7,
+    "min": 3,
+    "text": "Book needs only 3 cards and is worth 7 more prestige."
   }
 }

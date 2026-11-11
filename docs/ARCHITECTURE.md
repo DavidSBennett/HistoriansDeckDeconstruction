@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: build steps 1 and 2 done (2026-11-11); step 2 is waiting for review. The original spec is [BRIEF.md](BRIEF.md); this file records what
+Status: build steps 1–3 done (2026-11-11); step 3 is waiting for review. The original spec is [BRIEF.md](BRIEF.md); this file records what
 was decided since and where the mock-up's code differs from the brief.
 
 ## Decisions
@@ -18,7 +18,7 @@ was decided since and where the mock-up's code differs from the brief.
 
 1. ✔ Repo setup; mock-up constants extracted to `data/`; data validator; mock-up simulator.
 2. ✔ JS engine: exact port with serialisable state, checked against the mock-up step by step (see "The JS engine" below). **Review stop.**
-3. Rules changes in the JS engine (Research, tiered upgrade piles). Re-run the simulations for new reference numbers. **Review stop.**
+3. ✔ Rules changes in the JS engine (Research, tiered upgrade piles), with new reference numbers. **Review stop.**
 4. Protocol wrapper (turn, phase, pending choice, repeated ids), structured events, `view(state, seat)`, and hidden-information tests.
 5. PHP engine plus conformance: the JS engine records test games, the PHP engine replays them and must match exactly; GitHub Actions runs both before any deploy. **Review stop.**
 6. Shared login, DB migrations, PHP backend (lobby, polling, actions, server-side bots).
@@ -46,34 +46,59 @@ deeper the pile has been bought, the stronger the copy, so a late buyer gets a m
 effect grows; a pile's price stays the same.** The number of tiers is the number of copies (it replaces
 `upgradeCopies`).
 
-Proposed data shape: each tier stays its own entry in `actions.json`, with its own name, text and effect
-numbers. A new `market.json` lists the piles in display order, each with one price and its tiers from the top
-down:
+**How it is stored.** Each tier is its own entry in `actions.json`, with its own name, text and effect
+numbers. `data/market.json` lists the piles in display order, each with one price and its tiers from the top
+down. The protocol buys by pile id (`network` takes `pile`), and `nextTier(S, R, pile)` says which card the
+next buyer gets.
 
 ```json
-[
-  { "pile": "research", "value": 2, "tiers": ["travel", "assistant"] },
-  { "pile": "keynote",  "value": 2, "tiers": ["keynote", "keynote2"] }
-]
+{ "pile": "research", "value": 3, "tiers": ["travel", "assistant"] }
 ```
 
-Placeholder tiers, there only so there's something to rebalance (the first tier is the mock-up's card):
+A Research card with `take` draws that many at no cost. A Research card without `take` works as in the
+mock-up (discard n, take n). With no `market.json`, every upgrade becomes a pile of `upgradeCopies`
+identical copies. These two fallbacks are what the mock-up's rules look like, which is why the 11,700-game
+parity check still runs against the mock-up after the rule changes.
+
+Placeholder tiers, there only so there's something to rebalance (the first tier is the mock-up's card;
+second-tier names are placeholders too):
 
 | Pile (price) | First copy | Second copy |
 |---|---|---|
-| Sabbatical (1) | draw 2 | draw 3 |
-| Keynote Address (2) | paper worth 6 | paper worth 8 |
-| Society Membership (2) | Network discards count +1 | +2 |
-| Literary Agent (3) | article +5 | +7 |
-| Fellowship (3) | draw 3 | draw 4 |
-| University Press (4) | book needs 3 cards, +4 | needs 3 cards, +7 |
-| Research: Travel Grant, then Research Assistant (price open) | draw 4 | draw 5 |
+| Sabbatical (1) | Sabbatical: draw 2 | Extended Sabbatical: draw 3 |
+| Keynote Address (2) | Keynote Address: paper worth 6 | Plenary Address: paper worth 8 |
+| Research (**3, placeholder**) | Travel Grant: draw 4 | Research Assistant: draw 5 |
+| Society Membership (2) | Society Membership: discards +1 | Society Council Seat: discards +2 |
+| Literary Agent (3) | Literary Agent: article +5 | Senior Literary Agent: article +7 |
+| Fellowship (3) | Fellowship: draw 3 | Senior Fellowship: draw 4 |
+| University Press (4) | University Press: 3-card book, +4 | Flagship University Press: 3-card book, +7 |
 
-Still open: Travel Grant cost 2 and Research Assistant cost 3, but one pile has one price. Which price
-should the Research pile have?
+**Still open:** Travel Grant cost 2 and Research Assistant cost 3, but one pile has one price. It is set to
+3 for now: a free draw of 4 is strong.
 
-Bots need new Research logic: no discards, so they pick the archive with the same preference as before. The
-reference numbers will change, and step 3 records new ones.
+**Bots.** No-cost Research needs no discards, so the bot just picks an archive, with the same preference as
+before (the thesis it holds most of). A bot buys at most one card from each pile.
+
+### New reference numbers (2026-11-11, `npm run sim`, seeds 1–1,000)
+
+| Game | Average prestige by place | Mock-up rules |
+|---|---|---|
+| 2 players, medium | 77.4 / 59.2 | 68.5 / 50.1 |
+| 3 players, medium | 103.8 / 85.5 / 67.4 | 90.5 / 72.9 / 55.7 |
+| 4 players, medium | 133.1 / 111.4 / 95.3 / 76.3 | 115.3 / 96.2 / 80.3 / 62.9 |
+| 4 players, long | 234.8 / 201.1 / 175.9 / 147.7 | |
+
+- **Field balance evened out.** Two-player win rates by starting field are now A 51%, B 48%, C 50%, D 50%
+  (B was 43%).
+- **Archives run dry in big games.** At the end of medium games, archives average 7.6 cards (2 players),
+  4.8 (3) and 2.0 (4). In long four-player games, 80% of archives are empty.
+- **Second tiers sell.** In four-player medium games, every pile except Society sells its second copy in
+  20–90% of games.
+- **Society Membership is never bought, under either set of rules.** That's a bot quirk, not a balance
+  result. The bot replaces its basic card of the same kind with the upgrade. For a Network upgrade, that's the
+  Network card being played, which isn't in the hand or discard pile, so the bot never finds a card to
+  replace. The brief's "Society Membership tests as not worth buying" has the same cause. A fix would change
+  the bots, so it waits for your call.
 
 ## Login (step 6)
 
@@ -153,7 +178,8 @@ frontend/    step 7: React 18 + Vite + Tailwind, plain JS
 ## Data files
 
 - `config.json` is the mock-up's `CONFIG`, plus `startingActions` (was `BASE`) and `seats` {min, max} (was hard-coded in the setup screen).
-- `actions.json`, `bonuses.json` and `trash.json` are `ACTIONS`, `BONUS` and `TRASH`. Upgrades are the actions with `value > 0`, in file order, which also sets the market's order.
+- `actions.json`, `bonuses.json` and `trash.json` started as `ACTIONS`, `BONUS` and `TRASH`. Since step 3, `actions.json` also has the second-tier upgrades and the `take` numbers, and `config.json` has `terms.archive` (the word the log uses for a stack) instead of `upgradeCopies`.
+- `market.json` lists the upgrade piles: id, price, and tiers from the top down. Its order is the conference space's order.
 - `decks/<id>/deck.json` holds `{ id, name, theses, cards }`. `theses[L]` is `{ q, articles, books, color }`; `cards` keep the mock-up's fields. A game stores its deck id, so swapping decks never breaks a game in progress.
 - `npm run data:validate` checks every deck; `npm run data:check` reports whether `data/` still matches the mock-up. It will stop matching once you rebalance; the parity tests use the mock-up's own constants, not `data/`.
 

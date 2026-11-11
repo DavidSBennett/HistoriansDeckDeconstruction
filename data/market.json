@@ -1,0 +1,58 @@
+[
+  {
+    "pile": "sabbatical",
+    "value": 1,
+    "tiers": [
+      "sabbatical",
+      "sabbatical2"
+    ]
+  },
+  {
+    "pile": "keynote",
+    "value": 2,
+    "tiers": [
+      "keynote",
+      "keynote2"
+    ]
+  },
+  {
+    "pile": "research",
+    "value": 3,
+    "tiers": [
+      "travel",
+      "assistant"
+    ]
+  },
+  {
+    "pile": "society",
+    "value": 2,
+    "tiers": [
+      "society",
+      "society2"
+    ]
+  },
+  {
+    "pile": "agent",
+    "value": 3,
+    "tiers": [
+      "agent",
+      "agent2"
+    ]
+  },
+  {
+    "pile": "fellowship",
+    "value": 3,
+    "tiers": [
+      "fellowship",
+      "fellowship2"
+    ]
+  },
+  {
+    "pile": "press",
+    "value": 4,
+    "tiers": [
+      "press",
+      "press2"
+    ]
+  }
+]

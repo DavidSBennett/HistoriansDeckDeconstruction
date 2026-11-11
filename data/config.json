@@ -19,7 +19,6 @@
     "medium": 10,
     "long": 14
   },
-  "upgradeCopies": 2,
   "runMin": 3,
   "runPts": 12,
   "typesMin": 5,
@@ -39,5 +38,8 @@
   "seats": {
     "min": 2,
     "max": 4
+  },
+  "terms": {
+    "archive": "card archive"
   }
 }

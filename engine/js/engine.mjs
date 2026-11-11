@@ -107,7 +107,7 @@ export function newGame(R, seats, length, seed) {
     shuffle(S, S.stacks[L]);
     S.ti[L] = { a: 0, b: 0 };
   }
-  for (const u of R.upgrades) S.market[u] = R.config.upgradeCopies;
+  for (const pl of R.piles) S.market[pl.pile] = pl.tiers.length;
   seats.forEach((s, i) => {
     S.players.push({
       i, name: s.name, bot: !!s.bot,
@@ -123,7 +123,7 @@ export function newGame(R, seats, length, seed) {
 export function doDraft(S, R, L) {
   const p = S.players[S.draftAt];
   if (S.phase !== "draft" || !p) return "Not drafting.";
-  if (!hasOwn(S.stacks, L) || S.stacks[L].length < R.config.startCards) return "Not enough cards left in that stack.";
+  if (!hasOwn(S.stacks, L) || S.stacks[L].length < R.config.startCards) return "Not enough cards left in that " + R.archiveWord + ".";
   const got = S.stacks[L].splice(0, R.config.startCards);
   p.deck.push(...got);
   shuffle(S, p.deck);
@@ -175,19 +175,29 @@ export function doOrganize(S, R, seat, aUid, uids) {
   return null;
 }
 
+// Two kinds of Research card, set by the data:
+//  - with `take` (the current rules): no cost; take `take` cards from the archive. `disc` must be empty.
+//  - without it (the mock-up's rules): discard n cards from hand and take n (+ `bonus`).
+// Either way, look effects (Map bonus, `look`) show extra cards and that many go back under the archive.
 // chooser(S, R, seat, seenUids, k) -> uids to put back (bots). Without one, a put-back choice is parked in
 // S.pending and finished later by finishResearch.
 export function doResearch(S, R, seat, aUid, disc, L, chooser) {
   const p = S.players[seat];
   if (!actCheck(S, R, p, aUid, "research")) return "Not a research card.";
-  if (!disc.length) return "Discard at least one card.";
-  if (disc.includes(aUid) || disc.some((u) => !p.hand.includes(u))) return "Bad discard.";
-  if (!hasOwn(S.stacks, L) || !S.stacks[L].length) return "That stack is empty.";
   const d = def(S, R, aUid);
+  const fixed = Number.isInteger(d.take);
+  disc = disc || [];
+  if (fixed) {
+    if (disc.length) return "This Research card needs no discards.";
+  } else {
+    if (!disc.length) return "Discard at least one card.";
+    if (disc.includes(aUid) || disc.some((u) => !p.hand.includes(u))) return "Bad discard.";
+  }
+  if (!hasOwn(S.stacks, L) || !S.stacks[L].length) return "That " + R.archiveWord + " is empty.";
   const look = bonus(S, R, seat, "Map") + (d.look || 0);
   playCard(p, aUid);
   for (const u of disc) p.discard.push(take(p.hand, u));
-  const want = disc.length + (d.bonus || 0);
+  const want = fixed ? d.take : disc.length + (d.bonus || 0);
   const seen = S.stacks[L].splice(0, Math.min(want + look, S.stacks[L].length));
   const pend = { seat, seen, keepN: Math.min(want, seen.length), toHand: !!d.toHand, L, n: disc.length };
   if (seen.length <= pend.keepN) return finishResearch(S, R, pend, []);
@@ -337,22 +347,30 @@ export function doBook(S, R, seat, aUid, handUids, shelfUids, showUid) {
   return null;
 }
 
-export function doNetwork(S, R, seat, aUid, disc, upId, replUid) {
+// The tier the next buyer of a pile gets (deeper copies are stronger), or null if the pile is empty.
+export function nextTier(S, R, pileId) {
+  const pl = R.pileById.get(pileId);
+  const left = pl ? S.market[pileId] : 0;
+  return left ? pl.tiers[pl.tiers.length - left] : null;
+}
+
+export function doNetwork(S, R, seat, aUid, disc, pileId, replUid) {
   const p = S.players[seat];
   if (!actCheck(S, R, p, aUid, "network")) return "Not a network card.";
-  const up = hasOwn(R.actions, upId) ? R.actions[upId] : null;
-  if (!up || !S.market[upId]) return "That upgrade is gone.";
+  const pl = R.pileById.get(pileId);
+  if (!pl || !S.market[pileId]) return "That upgrade is gone.";
   if (!disc.length) return "Discard at least one card.";
   if (disc.includes(aUid) || disc.some((u) => !p.hand.includes(u))) return "Bad discard.";
-  if (disc.length + (def(S, R, aUid).bonus || 0) + bonus(S, R, seat, "Letter") < up.value) return "You need to discard more cards for that upgrade.";
+  if (disc.length + (def(S, R, aUid).bonus || 0) + bonus(S, R, seat, "Letter") < pl.value) return "You need to discard more cards for that upgrade.";
   if (!disc.includes(replUid) && !p.discard.includes(replUid)) return "Choose a card in your discard pile to replace.";
+  const tier = nextTier(S, R, pileId);
   playCard(p, aUid);
   for (const u of disc) p.discard.push(take(p.hand, u));
   const out = take(p.discard, replUid);
   if (isSource(S, out)) S.stacks[src(S, R, out).arg].push(out);
-  p.discard.push(mk(S, "action", upId));
-  S.market[upId]--;
-  log(S, { type: "network", seat, n: disc.length, up: upId, out, disc: disc.slice() });
+  p.discard.push(mk(S, "action", tier));
+  S.market[pileId]--;
+  log(S, { type: "network", seat, n: disc.length, pile: pileId, up: tier, out, disc: disc.slice() });
   return null;
 }
 

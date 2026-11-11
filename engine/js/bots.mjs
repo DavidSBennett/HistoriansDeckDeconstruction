@@ -3,7 +3,7 @@
 // sort comparator, so their use of random numbers depends on the sort algorithm; the PHP port must copy V8's.
 import {
   random, def, src, tagsOf, isSource, isTrash, kindOf, refOf, bonus, keepLimit, allSources, bookCheck, sameEra,
-  doDraft, doOrganize, doDraw, doBook, doArticle, doNetwork, doConference, doResearch, endTurn,
+  doDraft, doOrganize, doDraw, doBook, doArticle, doNetwork, doConference, doResearch, endTurn, nextTier,
 } from "./engine.mjs";
 
 export function botDraft(S, R) {
@@ -80,13 +80,15 @@ export function botStep(S, R) {
   if ((a = H("network")) && owned >= 4) {
     const others = p.hand.filter((u) => u !== a);
     const bon = (def(S, R, a).bonus || 0) + bonus(S, R, seat, "Letter");
-    const have = (k) => [...p.deck, ...p.hand, ...p.discard, ...p.play].some((u) => kindOf(S, u) === "action" && refOf(S, u) === k);
-    const opts = R.upgrades
-      .filter((u) => S.market[u] && !have(u) && R.actions[u].value <= others.length + bon)
-      .sort((x, y) => R.actions[y].value - R.actions[x].value);
-    for (const u of opts) {
-      const k = R.actions[u].kind;
-      const need = Math.max(1, R.actions[u].value - bon);
+    // A bot buys at most one card from each pile (in the mock-up: at most one copy of each upgrade).
+    const ownedActions = new Set([...p.deck, ...p.hand, ...p.discard, ...p.play].filter((u) => kindOf(S, u) === "action").map((u) => refOf(S, u)));
+    const have = (pl) => pl.tiers.some((t) => ownedActions.has(t));
+    const opts = R.piles
+      .filter((pl) => S.market[pl.pile] && !have(pl) && pl.value <= others.length + bon)
+      .sort((x, y) => y.value - x.value);
+    for (const pl of opts) {
+      const k = R.actions[nextTier(S, R, pl.pile)].kind;
+      const need = Math.max(1, pl.value - bon);
       // Replace the basic card of the same kind. (This compares a card's action id with a kind name, which
       // works because each basic action's id equals its kind; kept exactly as in the mock-up.)
       let tgt = [...others, ...p.discard].find((c) => kindOf(S, c) === "action" && refOf(S, c) === k);
@@ -99,7 +101,7 @@ export function botStep(S, R) {
       const disc = others.includes(tgt) ? [tgt] : [];
       while (disc.length < need && pool.length) disc.push(pool.shift());
       if (disc.length < need) continue;
-      if (doNetwork(S, R, seat, a, disc, u, tgt) === null) return true;
+      if (doNetwork(S, R, seat, a, disc, pl.pile, tgt) === null) return true;
     }
   }
   if ((a = H("conference"))) {
@@ -111,19 +113,28 @@ export function botStep(S, R) {
     }
   }
   if ((a = H("research")) && owned < 10) {
-    const others = p.hand.filter((u) => u !== a);
-    if (others.length) {
-      const cnt = {};
-      for (const L of R.letters) cnt[L] = 0;
-      for (const c of allSources(S, p)) cnt[src(S, R, c).arg] += 2;
-      for (const e of p.shelf) cnt[src(S, R, e.uid).arg] += 3;
-      const Ls = R.letters
-        .filter((L) => S.stacks[L].length)
-        .sort((x, y) => cnt[y] - cnt[x] || S.stacks[y].length - S.stacks[x].length || random(S) - 0.5);
-      if (Ls.length && typeof doResearch(S, R, seat, a, others, Ls[0], botReject) === "object") return true;
+    // A no-cost Research card (`take`) needs no discards; the mock-up's kind discards the rest of the hand.
+    const fixed = Number.isInteger(def(S, R, a).take);
+    const disc = fixed ? [] : p.hand.filter((u) => u !== a);
+    if (fixed || disc.length) {
+      const L = botArchive(S, R, seat);
+      if (L && typeof doResearch(S, R, seat, a, disc, L, botReject) === "object") return true;
     }
   }
   return false;
+}
+
+// The archive a bot researches: the thesis it holds most of, then the fullest archive, then at random.
+function botArchive(S, R, seat) {
+  const p = S.players[seat];
+  const cnt = {};
+  for (const L of R.letters) cnt[L] = 0;
+  for (const c of allSources(S, p)) cnt[src(S, R, c).arg] += 2;
+  for (const e of p.shelf) cnt[src(S, R, e.uid).arg] += 3;
+  const Ls = R.letters
+    .filter((L) => S.stacks[L].length)
+    .sort((x, y) => cnt[y] - cnt[x] || S.stacks[y].length - S.stacks[x].length || random(S) - 0.5);
+  return Ls[0] ?? null;
 }
 
 // Which cards the current player keeps at the end of the turn.
