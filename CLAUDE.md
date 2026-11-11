@@ -7,4 +7,5 @@
 - The JS engine (`engine/js/`) is the reference; the PHP engine (`engine/php/`) must match it exactly, as proven by recorded test games. Change the JS first, then port the change.
 - Hosting: GreenGeeks shared hosting, PHP 8.3 with mysqli, no Node on the server. The user runs migrations by hand (numbered `database/NN_description.sql`). PHP 8.3 CLI is installed locally for tests.
 - Conventions follow `../Historians_Board_Version` (login, deploy workflow, frontend stack) and `../VotingGame-2024` (game state as one JSON column, join codes, a version number on each update).
-- Tests: `npm test` (node:test, files named `tests/**/*.test.mjs`).
+- Tests: `npm test` (node:test, files named `tests/**/*.test.mjs`). After any change to `engine/js/` that should not change the rules, run `npm run parity` (about 7 minutes) as well.
+- From step 3 on the rules deliberately leave the mock-up's. Keep the parity check working against the mock-up's own constants (tools/lib/parity.mjs `mockupRules`) for whatever has not changed, or tag the last commit that matches it exactly.

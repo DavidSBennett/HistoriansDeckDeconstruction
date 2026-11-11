@@ -11,6 +11,8 @@
     "data:extract": "node tools/extract-data.mjs",
     "data:check": "node tools/extract-data.mjs --check",
     "data:validate": "node tools/validate-data.mjs",
-    "sim:mockup": "node tools/mockup-sim.mjs"
+    "sim": "node tools/simulate.mjs",
+    "sim:mockup": "node tools/mockup-sim.mjs",
+    "parity": "node tools/parity.mjs"
   }
 }

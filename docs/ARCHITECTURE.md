@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: build step 1 done (2026-11-11). The original spec is [BRIEF.md](BRIEF.md); this file records what
+Status: build steps 1 and 2 done (2026-11-11); step 2 is waiting for review. The original spec is [BRIEF.md](BRIEF.md); this file records what
 was decided since and where the mock-up's code differs from the brief.
 
 ## Decisions
@@ -17,7 +17,7 @@ was decided since and where the mock-up's code differs from the brief.
 ## Build order
 
 1. ✔ Repo setup; mock-up constants extracted to `data/`; data validator; mock-up simulator.
-2. JS engine: exact port with serialisable state, checked against the mock-up step by step (full state compared after every action, 1,000 seeded bot games per seat count and length, plus scripted human games that cover Research put-back, citations and Network replacement). **Review stop.**
+2. ✔ JS engine: exact port with serialisable state, checked against the mock-up step by step (see "The JS engine" below). **Review stop.**
 3. Rules changes in the JS engine (Research, tiered upgrade piles). Re-run the simulations for new reference numbers. **Review stop.**
 4. Protocol wrapper (turn, phase, pending choice, repeated ids), structured events, `view(state, seat)`, and hidden-information tests.
 5. PHP engine plus conformance: the JS engine records test games, the PHP engine replays them and must match exactly; GitHub Actions runs both before any deploy. **Review stop.**
@@ -105,14 +105,45 @@ reference numbers will change, and step 3 records new ones.
 Reference numbers (`npm run sim:mockup`, seeds 1–1,000, medium): 2 players 68.5 / 50.1; 3 players
 90.5 / 72.9 / 55.7; 4 players 115.3 / 96.2 / 80.3 / 62.9. Two-player win rate by starting field: A 49%, B 43%, C 55%, D 51%.
 
+## The JS engine (step 2)
+
+`engine/js/` is the mock-up's logic ported function by function, with only structural changes:
+
+- **No globals.** Every function takes the state `S` and a read-only rules object `R` (built by `makeRules`
+  from the `data/` files). Players are passed as seat numbers.
+- **`S` is plain JSON.** Cards are numeric ids, and `S.cards[uid] = { kind, ref }` replaces `REG`. The random
+  generator's state is the integer `S.rng`, so a game can be saved after any step and resumed, in JS or PHP.
+  A pending Research choice stores the seat instead of a player object. `endTriggered` is gone.
+- **The log holds structured events** (`{ r, type, seat, ... }`), not English. `describe(event, S, R)` renders
+  the mock-up's exact sentence. Events carry the card ids involved, ready for step 4's per-player redaction.
+- The `do*` functions keep the mock-up's contract (validate, then change; `null`, an error string, or an object)
+  and its exact error messages. Like the mock-up, they trust the caller about turn, phase and repeated ids;
+  step 4's protocol layer adds those checks.
+
+**How parity is checked** (`tools/lib/parity.mjs`): the mock-up's script runs in a Node sandbox next to the
+engine, with the same seed. After **every** step, three things are compared: the whole state (the mock-up's
+converted into the engine's shape), the action's return value, and each new log line, which must match the
+mock-up's text exactly. The engine's state also goes through JSON and back before every step.
+
+- **Bot games:** both sides run their own bots, so the bots are checked too.
+- **Fuzz games:** some seats make random choices, mostly plausible and some invalid. These reach what bots
+  never do: Research put-back choices, books with no showcase or with your own shelf cards, Network replacing
+  an older discard, every error message.
+- A test changes one rule number and confirms the harness catches the difference, so a pass means something.
+
+Full run (`npm run parity`): 1,000 bot games and 300 fuzz games for each of 2, 3 and 4 players and each
+length, 11,700 games in all.
+
+`npm run sim` gives the same numbers as `npm run sim:mockup` and runs about 3,000 games per second.
+
 ## Repository layout
 
 ```
 reference/   the mock-up, unchanged; the parity tests load its script
 data/        config.json, actions.json, bonuses.json, trash.json, decks/<id>/deck.json
-tools/       extract-data, validate-data, mockup-sim (later: simulate, record test games)
+tools/       extract-data, validate-data, simulate, mockup-sim, parity (later: record test games)
 tests/       node:test suites
-engine/js/   step 2: reference engine, view(), bots
+engine/js/   reference engine: rng, rules, engine, bots, describe (step 4 adds protocol and view())
 engine/php/  step 5: authoritative port
 backend/     step 6: PHP endpoints, flat like Board's backend/
 database/    step 6: NN_description.sql migrations, run by hand

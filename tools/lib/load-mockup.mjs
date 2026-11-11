@@ -24,7 +24,7 @@ export function loadMockup(file = MOCKUP_PATH) {
   // const/let declarations are not visible on the context, so the appended line hands them out.
   const src =
     script +
-    "\n;globalThis.__mockup={DATA,CONFIG,ACTIONS,BASE,TRASH,BONUS,LETTERS,UPGRADES};";
+    "\n;globalThis.__mockup={DATA,CONFIG,ACTIONS,BASE,TRASH,BONUS,LETTERS,UPGRADES,REG};";
   const ctx = { module: { exports: {} }, Date, console };
   vm.createContext(ctx);
   vm.runInContext(src, ctx, { filename: path.basename(file) });

@@ -13,9 +13,11 @@ Needs Node 22 or later. There are no dependencies to install yet.
 
 | Command | What it does |
 |---|---|
-| `npm test` | Runs the test suites in `tests/`. |
+| `npm test` | Runs the test suites in `tests/`, including a quick slice of the parity check. |
+| `npm run sim` | **For balancing.** Plays 1,000 bot games per seat count with the engine and the rules in `data/`. Options: `-- --games 5000 --length long --seats 2,4 --first-seed 1`. |
 | `npm run data:validate` | Checks `data/` for mistakes after a rebalance or deck swap. |
-| `npm run sim:mockup` | Plays 1,000 bot games per seat count with the mock-up's own logic. Options: `-- --games 500 --length long --seats 2,4`. |
+| `npm run parity` | The full check of the engine against the mock-up: 11,700 games compared after every step (about 7 minutes). Options: `-- --games 100 --fuzz 50`. |
+| `npm run sim:mockup` | The same simulation as `sim`, but with the mock-up's own logic, for reference numbers. |
 | `npm run data:check` | Reports whether `data/` still matches the mock-up's constants. |
 | `npm run data:extract` | Regenerates `data/` from the mock-up. **This overwrites any rebalancing.** |
 
