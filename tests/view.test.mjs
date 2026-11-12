@@ -20,7 +20,7 @@ function* states() {
     for (let seed = 1; seed <= 4; seed++) {
       const all = [];
       playProtocolGame(R, n, "short", seed, { humans: 1 + (seed % n), onState: (S) => all.push(S) });
-      yield* all.filter((_, i) => i % 3 === 0);
+      yield* all.filter((_, i) => i % 3 === 0 || i === all.length - 1); // always the finished game
     }
 }
 

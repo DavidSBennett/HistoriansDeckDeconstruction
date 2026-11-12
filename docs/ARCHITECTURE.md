@@ -46,7 +46,32 @@ snapshot), so they still play with Network and trash.
 every player may buy once per turn (`config.buying.perTurn`): discard cards from hand whose power adds up to a
 pile's price, and the pile's next card goes to **your discard pile**. Nothing is replaced. Protocol message:
 `{ type: "buy", discard: [ids], pile }`. Letters (Correspondence, +2) still add purchasing power while in
-hand, and so does a Society card in hand (+1 or +2). Pile prices are unchanged.
+hand, and so does a Society card in hand (+1 or +2).
+
+**Pile prices were raised** (2026-11-11), roughly doubled plus 2, keeping the old order:
+
+| Pile | Old price | New price |
+|---|---|---|
+| Sabbatical | 1 | 4 |
+| Keynote Address | 2 | 6 |
+| Society Membership | 2 | 6 |
+| Research (Travel Grant, Research Assistant) | 3 | 8 |
+| Literary Agent | 3 | 8 |
+| Fellowship | 3 | 8 |
+| University Press | 4 | 10 |
+
+At the old prices a hand of five (usually worth 6–9 with Letters and owned upgrades) bought something every
+turn, and the piles sold out. Simulated (400 games each), these prices roughly halve purchases while winning
+scores barely move:
+
+| Prices | 2 players | 4 players |
+|---|---|---|
+| Old | 6.1 buys each, 5.4 of 7 piles sold out, first buy round 1.0 | 3.5 buys each, 6.9 sold out |
+| Old + 1 or + 2 | about the same | about the same |
+| **New (double + 2)** | 3.5 buys each, 2.4 sold out, first buy round 1.5 | 2.5 buys each, 4.2 sold out, first buy round 2.3 |
+| Old + 5 (6–9) | 1.9 buys each, 0.8 sold out, first buy round 4.5 | 1.8 buys each, 2.5 sold out |
+
+The price set lives in `market.json` (and each tier's `value` in `actions.json` must match).
 
 **Organize returns cards** (`actions.organize.returns`). Choose any cards in your hand or discard pile
 (not the Organize card itself):
@@ -88,17 +113,17 @@ They publish False Lead articles and books when they can and showcase the False 
 `config.falseLead`, `organize.returns`, `power`); without them the engine plays the mock-up exactly, so the
 parity check still covers everything that didn't change. Conformance records games under both rule sets.
 
-**Simulated** (seeds 1–1,000, medium):
+**Simulated** with the new prices (seeds 1–1,000, medium):
 
 | Game | Average prestige by place | False Lead publications per game |
 |---|---|---|
-| 2 players | 71.8 / 46.8 | 1.6 articles, 1.0 books (15.8 prestige each) |
-| 3 players | 106.9 / 81.7 / 59.0 | 2.3 articles, 2.1 books (19.4) |
-| 4 players | 139.1 / 112.9 / 92.1 / 68.9 | 3.1 articles, 3.0 books (22.9) |
+| 2 players | 70.1 / 45.9 | 2.1 articles, 0.8 books (13.5 prestige each) |
+| 3 players | 96.6 / 72.8 / 51.0 | 2.9 articles, 1.7 books (16.8) |
+| 4 players | 127.2 / 101.9 / 81.8 / 58.5 | 3.6 articles, 2.8 books (20.9) |
 
-Scores are lower than under the step 3 rules, and gaps between places are wider. Buying is cheap now: a hand
-of five is worth 5 or more, so bots buy nearly every upgrade in every game, and every pile sells out in 3- and
-4-player games. Raising pile prices is the obvious lever.
+Scores are lower than under the step 3 rules, and gaps between places are wider. **Field A now trails:** it
+wins 42% of 2-player games, 28% of 3-player and 19% of 4-player (B, C and D are even), down from 49/32/22% at
+the old prices. Archives end empty 6–19% of the time.
 
 ## Rules changes (step 3)
 
@@ -549,8 +574,8 @@ frontend/    React 18 + Vite 5 client, plain JS; imports engine/js through the @
 
 ## Open items
 
-- Step 9 balance: pile prices (buying is now cheap enough that every upgrade sells), which sources are worth 2
-  (the CSV's `bonus` column), and the False Lead bookshelf effects in `falseLeads.json`.
+- Step 9 balance: field A trails since the price rise; which sources are worth 2 (the CSV's `bonus` column);
+  and the False Lead bookshelf effects in `falseLeads.json`.
 
 - Are cards discarded to pay for an action (and the card Network replaces) public? Built as suggested: private, and the log shows only counts (see `PRIVATE_FIELDS` in `engine/js/view.mjs`; making one public means deleting it from that list, then porting the change to PHP).
 - An article's second source and a book's non-showcased hand cards go to the author's discard pile, which rivals can't see, so the log names them only to the author. Publications might reasonably show all their sources; it's a one-line change.

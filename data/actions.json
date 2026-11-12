@@ -39,7 +39,7 @@
   "sabbatical": {
     "name": "Sabbatical",
     "kind": "draw",
-    "value": 1,
+    "value": 4,
     "power": 2,
     "draw": 2,
     "text": "Draw 2 cards."
@@ -47,7 +47,7 @@
   "sabbatical2": {
     "name": "Extended Sabbatical",
     "kind": "draw",
-    "value": 1,
+    "value": 4,
     "power": 3,
     "draw": 3,
     "text": "Draw 3 cards."
@@ -55,7 +55,7 @@
   "keynote": {
     "name": "Keynote Address",
     "kind": "conference",
-    "value": 2,
+    "value": 6,
     "power": 2,
     "pts": 6,
     "text": "Conference paper worth 6 instead of 2."
@@ -63,7 +63,7 @@
   "keynote2": {
     "name": "Plenary Address",
     "kind": "conference",
-    "value": 2,
+    "value": 6,
     "power": 3,
     "pts": 8,
     "text": "Conference paper worth 8 instead of 2."
@@ -71,7 +71,7 @@
   "travel": {
     "name": "Travel Grant",
     "kind": "research",
-    "value": 3,
+    "value": 8,
     "power": 2,
     "take": 4,
     "text": "Draw 4 cards from a card archive."
@@ -79,7 +79,7 @@
   "society": {
     "name": "Society Membership",
     "kind": "network",
-    "value": 2,
+    "value": 6,
     "power": 2,
     "bonus": 1,
     "text": "Buying: +1 purchasing power while this is in your hand."
@@ -87,7 +87,7 @@
   "society2": {
     "name": "Society Council Seat",
     "kind": "network",
-    "value": 2,
+    "value": 6,
     "power": 3,
     "bonus": 2,
     "text": "Buying: +2 purchasing power while this is in your hand."
@@ -95,7 +95,7 @@
   "agent": {
     "name": "Literary Agent",
     "kind": "article",
-    "value": 3,
+    "value": 8,
     "power": 2,
     "pts": 5,
     "text": "Article worth 5 more prestige."
@@ -103,7 +103,7 @@
   "agent2": {
     "name": "Senior Literary Agent",
     "kind": "article",
-    "value": 3,
+    "value": 8,
     "power": 3,
     "pts": 7,
     "text": "Article worth 7 more prestige."
@@ -111,7 +111,7 @@
   "assistant": {
     "name": "Research Assistant",
     "kind": "research",
-    "value": 3,
+    "value": 8,
     "power": 3,
     "take": 5,
     "text": "Draw 5 cards from a card archive."
@@ -119,7 +119,7 @@
   "fellowship": {
     "name": "Fellowship",
     "kind": "draw",
-    "value": 3,
+    "value": 8,
     "power": 2,
     "draw": 3,
     "text": "Draw 3 cards."
@@ -127,7 +127,7 @@
   "fellowship2": {
     "name": "Senior Fellowship",
     "kind": "draw",
-    "value": 3,
+    "value": 8,
     "power": 3,
     "draw": 4,
     "text": "Draw 4 cards."
@@ -135,7 +135,7 @@
   "press": {
     "name": "University Press",
     "kind": "book",
-    "value": 4,
+    "value": 10,
     "power": 2,
     "pts": 4,
     "min": 3,
@@ -144,7 +144,7 @@
   "press2": {
     "name": "Flagship University Press",
     "kind": "book",
-    "value": 4,
+    "value": 10,
     "power": 3,
     "pts": 7,
     "min": 3,
